@@ -3,7 +3,6 @@ import dynamic from 'next/dynamic'
 import './globals.css'
 
 const ChatWrapper = dynamic(() => import('../components/ChatWrapper'), { ssr: false })
-const BottomNav   = dynamic(() => import('../components/BottomNav'),   { ssr: false })
 
 export const metadata: Metadata = {
   title: 'Unweave — Zero Waste Fashion',
@@ -33,10 +32,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         {/* Bottom padding on mobile so content isn't hidden behind BottomNav */}
-        <div className="pb-0 md:pb-0" style={{ paddingBottom: 'var(--bottom-nav-height, 0)' }}>
+        <div style={{ paddingBottom: 'var(--bottom-nav-height, 0)' }}>
           {children}
         </div>
-        <BottomNav />
         <ChatWrapper />
         <script dangerouslySetInnerHTML={{
           __html: `

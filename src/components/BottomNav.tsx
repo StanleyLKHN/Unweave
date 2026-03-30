@@ -5,38 +5,87 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { useCartStore } from '../store/cartStore'
 
+type DeviceType = 'android-chrome' | 'ios-safari' | 'ios-other' | 'other'
+
+function detectDevice(): DeviceType {
+  const ua = navigator.userAgent
+  const isIOS = /iphone|ipad|ipod/i.test(ua)
+  const isSafari = /safari/i.test(ua) && !/chrome|crios|fxios/i.test(ua)
+  const isChrome = /chrome|crios/i.test(ua)
+  const isAndroid = /android/i.test(ua)
+
+  if (isAndroid && isChrome) return 'android-chrome'
+  if (isIOS && isSafari) return 'ios-safari'
+  if (isIOS) return 'ios-other'
+  return 'other'
+}
+
+const GUIDES: Record<string, { title: string; steps: { text: string; sub: string }[] }> = {
+  'ios-safari': {
+    title: 'Install on iPhone',
+    steps: [
+      { text: 'Tap the Share button', sub: 'Square with arrow ↑ at the bottom of Safari' },
+      { text: 'Tap "Add to Home Screen"', sub: 'Scroll down in the share sheet' },
+      { text: 'Tap "Add"', sub: 'Unweave will appear on your home screen' },
+    ],
+  },
+  'ios-other': {
+    title: 'Install on iPhone',
+    steps: [
+      { text: 'Open this page in Safari', sub: 'Copy the URL and paste it in Safari' },
+      { text: 'Tap the Share button', sub: 'Square with arrow ↑ at the bottom' },
+      { text: 'Tap "Add to Home Screen"', sub: 'Scroll down in the share sheet' },
+    ],
+  },
+  other: {
+    title: 'Install Unweave',
+    steps: [
+      { text: 'Open browser menu', sub: 'Tap the three dots ⋮ in your browser' },
+      { text: 'Tap "Add to Home Screen"', sub: 'Or "Install App" depending on your browser' },
+      { text: 'Tap "Add"', sub: 'Unweave will appear on your home screen' },
+    ],
+  },
+}
+
 export default function BottomNav() {
   const pathname = usePathname()
   const count = useCartStore(s => s.count)()
   const [installed, setInstalled] = useState(false)
-  const [isIOS, setIsIOS] = useState(false)
+  const [device, setDevice] = useState<DeviceType>('other')
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
-  const [showIOSGuide, setShowIOSGuide] = useState(false)
+  const [showGuide, setShowGuide] = useState(false)
 
   useEffect(() => {
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setInstalled(true)
       return
     }
-    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent)
-    setIsIOS(ios)
-    const handler = (e: any) => { e.preventDefault(); setDeferredPrompt(e) }
+
+    setDevice(detectDevice())
+
+    const handler = (e: any) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+    }
     window.addEventListener('beforeinstallprompt', handler)
     window.addEventListener('appinstalled', () => setInstalled(true))
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
 
   async function handleInstall() {
-    if (isIOS) { setShowIOSGuide(true); return }
+    // Android Chrome — native prompt available
     if (deferredPrompt) {
       deferredPrompt.prompt()
       const { outcome } = await deferredPrompt.userChoice
       if (outcome === 'accepted') setInstalled(true)
       setDeferredPrompt(null)
-    } else {
-      setShowIOSGuide(true)
+      return
     }
+    // All other cases — show manual guide
+    setShowGuide(true)
   }
+
+  const guide = GUIDES[device] ?? GUIDES.other
 
   const tabs = [
     { href: '/', label: 'Home', icon: (a: boolean) => <svg width="22" height="22" viewBox="0 0 24 24" fill={a?'#2C1F14':'none'} stroke="#2C1F14" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
@@ -60,24 +109,34 @@ export default function BottomNav() {
             </Link>
           )
         })}
+
         {!installed && (
           <button onClick={handleInstall} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'10px 4px 8px', background:'none', border:'none', cursor:'pointer', gap:'3px', borderLeft:'0.5px solid #D4C9B0' }}>
-            <div style={{ opacity:0.7 }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2C1F14" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v13M7 11l5 5 5-5"/><path d="M3 18v2a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-2"/></svg></div>
+            <div style={{ opacity:0.7 }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2C1F14" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2v13M7 11l5 5 5-5"/><path d="M3 18v2a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-2"/>
+              </svg>
+            </div>
             <span style={{ fontSize:'9px', letterSpacing:'0.1em', textTransform:'uppercase', color:'#7A5C45', fontFamily:'Jost, sans-serif', fontWeight:400 }}>Install</span>
           </button>
         )}
       </nav>
-      {showIOSGuide && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(44,31,20,0.5)', zIndex:500, display:'flex', alignItems:'flex-end' }} onClick={() => setShowIOSGuide(false)}>
+
+      {/* Install guide modal */}
+      {showGuide && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(44,31,20,0.5)', zIndex:500, display:'flex', alignItems:'flex-end' }} onClick={() => setShowGuide(false)}>
           <div style={{ background:'#FDFAF5', width:'100%', padding:'2rem 1.5rem 3rem', borderRadius:'16px 16px 0 0' }} onClick={e => e.stopPropagation()}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1.5rem' }}>
-              <p style={{ fontFamily:'Cormorant Garamond, serif', fontSize:'22px', fontWeight:300, color:'#2C1F14' }}>Install Unweave</p>
-              <button onClick={() => setShowIOSGuide(false)} style={{ background:'none', border:'none', cursor:'pointer', fontSize:'22px', color:'#8C7B6E' }}>×</button>
+              <p style={{ fontFamily:'Cormorant Garamond, serif', fontSize:'22px', fontWeight:300, color:'#2C1F14' }}>{guide.title}</p>
+              <button onClick={() => setShowGuide(false)} style={{ background:'none', border:'none', cursor:'pointer', fontSize:'22px', color:'#8C7B6E' }}>×</button>
             </div>
-            {[{step:'1',text:'Tap the Share button',sub:'Square with arrow ↑ at the bottom of Safari'},{step:'2',text:'Tap "Add to Home Screen"',sub:'Scroll down in the share menu'},{step:'3',text:'Tap "Add"',sub:'Unweave appears on your home screen'}].map(({step,text,sub}) => (
-              <div key={step} style={{ display:'flex', gap:'1rem', alignItems:'flex-start', marginBottom:'1.25rem' }}>
-                <div style={{ width:'32px', height:'32px', borderRadius:'50%', background:'#2C1F14', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', color:'#F5F0E8', fontSize:'12px' }}>{step}</div>
-                <div><p style={{ fontSize:'14px', color:'#2C1F14', marginBottom:'2px' }}>{text}</p><p style={{ fontSize:'12px', color:'#8C7B6E', fontWeight:300 }}>{sub}</p></div>
+            {guide.steps.map(({ text, sub }, i) => (
+              <div key={i} style={{ display:'flex', gap:'1rem', alignItems:'flex-start', marginBottom:'1.25rem' }}>
+                <div style={{ width:'32px', height:'32px', borderRadius:'50%', background:'#2C1F14', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', color:'#F5F0E8', fontSize:'12px' }}>{i + 1}</div>
+                <div>
+                  <p style={{ fontSize:'14px', color:'#2C1F14', marginBottom:'2px' }}>{text}</p>
+                  <p style={{ fontSize:'12px', color:'#8C7B6E', fontWeight:300 }}>{sub}</p>
+                </div>
               </div>
             ))}
           </div>

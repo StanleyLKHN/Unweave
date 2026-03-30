@@ -28,7 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         {/* Bottom padding on mobile so content isn't hidden behind BottomNav */}
         <div style={{ paddingBottom: 'var(--bottom-nav-height, 0)' }}>
           {children}

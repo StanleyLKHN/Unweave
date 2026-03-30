@@ -3,43 +3,22 @@ import Link from 'next/link'
 import { createClient } from '../lib/supabase/server'
 import type { Product } from '../lib/types'
 
-const stats = [
-  { num: '10',   label: 'Pre-orders needed to start production' },
-  { num: '0g',   label: 'Fabric waste — we buy only what\'s needed' },
-  { num: '100%', label: 'Made to order, never made to stock' },
-  { num: '0',    label: 'Items left unsold, ever' },
+const steps = [
+  { num: '01', title: 'You reserve.', desc: 'No payment yet. Just your commitment that this piece deserves to exist.' },
+  { num: '02', title: 'Ten people agree.', desc: 'Once 10 reservations are placed, the run is confirmed. Not before.' },
+  { num: '03', title: 'We buy the fabric.', desc: 'Exactly what\'s needed. Down to the last centimetre. From certified deadstock mills.' },
+  { num: '04', title: 'Artisans make it.', desc: 'Handcrafted by partners who are paid fairly, named on your garment\'s passport.' },
+  { num: '05', title: 'It comes to you.', desc: 'One piece. Made for you. Carbon-neutral shipping. Zero leftovers.' },
 ]
 
-const values = [
-  {
-    title: 'You order first. Then we buy the fabric.',
-    desc: 'We don\'t hold stock. Once a piece reaches 10 pre-orders, we purchase exactly the fabric needed and send it to production. Not one centimetre more.',
-    icon: (
-      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="#7A5C45" strokeWidth="1.2" strokeLinecap="round">
-        <circle cx="18" cy="18" r="14"/>
-        <path d="M18 8v10l6 4"/>
-      </svg>
-    ),
-  },
-  {
-    title: 'No overproduction. Ever.',
-    desc: 'Traditional fashion overproduces by 30–40%. We produce exactly what\'s been reserved — nothing ends up in a landfill because nothing was made without a home.',
-    icon: (
-      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="#7A5C45" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M9 32V18L18 4l9 14v14"/><path d="M14 32v-9h8v9"/>
-      </svg>
-    ),
-  },
-  {
-    title: 'Your purchase is the production order.',
-    desc: 'When you reserve a piece, you\'re not just shopping — you\'re directly commissioning its creation. Fashion made on demand, by artisans, for people who actually want it.',
-    icon: (
-      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="#7A5C45" strokeWidth="1.2" strokeLinecap="round">
-        <path d="M6 24s1.5-1.5 5-1.5 6 2.5 10 2.5 5-1.5 5-1.5V9s-1.5 1.5-5 1.5-6-2.5-10-2.5S6 9 6 9z"/>
-        <line x1="6" y1="32" x2="6" y2="9"/>
-      </svg>
-    ),
-  },
+const manifesto = [
+  'Fashion doesn\'t have a waste problem.',
+  'It has a timing problem.',
+  'The industry makes clothes before anyone wants them.',
+  'Then discards what\'s left.',
+  'We reversed the order.',
+  'You want it first. Then we make it.',
+  'That\'s the whole model.',
 ]
 
 export default async function HomePage() {
@@ -52,176 +31,203 @@ export default async function HomePage() {
     .limit(4)
 
   const items: Product[] = products ?? []
+
   return (
     <main>
       <Navbar />
 
-      {/* ── HERO ── */}
-      <section className="grid grid-cols-1 md:grid-cols-2 min-h-screen bg-white">
-
-        {/* Left */}
-        <div className="flex flex-col justify-center px-6 md:px-20 py-16 md:py-24">
-          <p className="section-tag animate-fade-up animation-delay-100">
-            Made to order. Zero waste.
+      {/* HERO */}
+      <section style={{ minHeight: '100svh', background: '#2C1F14', display: 'grid', gridTemplateColumns: '1fr 1fr', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: 'clamp(2rem,5vw,5rem)', paddingBottom: 'clamp(3rem,6vw,6rem)', position: 'relative', zIndex: 2 }}>
+          <p style={{ fontFamily: 'Jost, sans-serif', fontSize: '10px', letterSpacing: '0.4em', textTransform: 'uppercase', color: '#7A5C45', marginBottom: '2rem', fontWeight: 400 }}>
+            Pre-order fashion
           </p>
-          <h1 className="font-serif text-display font-light leading-none text-espresso mb-7 animate-fade-up animation-delay-250">
-            We make it<br />
-            only when<br />
-            <em className="italic text-brown">you order it.</em>
+          <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(48px,7vw,96px)', fontWeight: 300, lineHeight: 0.95, color: '#F5F0E8', marginBottom: '2rem', letterSpacing: '-1px' }}>
+            Nothing is made<br />
+            until someone<br />
+            <em style={{ fontStyle: 'italic', color: '#D4C9B0' }}>wants it.</em>
           </h1>
-          <p className="text-body text-text-light max-w-sm mb-10 animate-fade-up animation-delay-400">
-            No warehouses. No leftovers. No waste. Reserve a piece — once 10 orders are placed, we buy the fabric and go to production. Your order is the beginning of the garment.
+          <p style={{ fontFamily: 'Jost, sans-serif', fontSize: 'clamp(13px,1.5vw,15px)', lineHeight: 1.8, color: '#8C7B6E', maxWidth: '360px', marginBottom: '3rem', fontWeight: 300 }}>
+            Unweave is a zero-waste fashion label built on one rule — we only produce what has already been reserved. Ten pre-orders. Then we buy the fabric. Not before.
           </p>
-          <div className="flex items-center gap-8 animate-fade-up animation-delay-550">
-            <Link href="/collection" className="btn-primary">Reserve a Piece</Link>
-            <Link href="/collection" className="btn-text">How It Works ↓</Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', flexWrap: 'wrap' }}>
+            <Link href="/collection" style={{ background: '#F5F0E8', color: '#2C1F14', padding: '14px 36px', textDecoration: 'none', fontFamily: 'Jost, sans-serif', fontSize: '10px', letterSpacing: '0.3em', textTransform: 'uppercase', fontWeight: 400 }}>
+              See Open Pre-orders
+            </Link>
+            <span style={{ fontFamily: 'Jost, sans-serif', fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#4A3728', fontWeight: 300 }}>
+              No charge until production begins
+            </span>
           </div>
         </div>
 
-        {/* Right — real photo */}
-        <div className="relative bg-oatmeal flex items-center justify-center overflow-hidden">
-          {/* 0% badge */}
-          <div className="absolute top-10 right-10 w-20 h-20 rounded-full bg-espresso flex flex-col items-center justify-center z-10">
-            <span className="font-serif text-2xl font-light text-cream leading-none">0%</span>
-            <span className="text-[7px] tracking-widest uppercase text-sand mt-1">Waste</span>
-          </div>
-
+        <div style={{ position: 'relative', overflow: 'hidden' }}>
           <img
             src="https://uffgbzoapueylgsffehj.supabase.co/storage/v1/object/public/products/uw_1.png"
-            alt="Oatmeal Trench Coat"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }}
+            alt="Unweave"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block', opacity: 0.85 }}
           />
-
-          {/* Product tag */}
-          <div className="absolute bottom-10 left-10 right-10 bg-white/95 backdrop-blur-sm px-6 py-5 border-hair border-sand">
-            <p className="font-serif text-base font-normal text-espresso">Oatmeal Trench — Deadstock Linen</p>
-            <p className="text-caption tracking-widest uppercase text-text-light mt-1">Pre-order open · 7 of 10 reserved · $2,450</p>
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, #2C1F14 0%, transparent 40%)' }} />
+          <div style={{ position: 'absolute', bottom: '2.5rem', right: '2.5rem', background: 'rgba(44,31,20,0.88)', padding: '1.25rem 1.75rem', borderLeft: '2px solid #7A5C45' }}>
+            <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '32px', fontWeight: 300, color: '#F5F0E8', lineHeight: 1 }}>7 / 10</p>
+            <p style={{ fontFamily: 'Jost, sans-serif', fontSize: '9px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#7A5C45', marginTop: '4px' }}>Reserved — 3 spots left</p>
+            <p style={{ fontFamily: 'Jost, sans-serif', fontSize: '11px', color: '#D4C9B0', marginTop: '6px', fontWeight: 300 }}>Oatmeal Trench · $2,450</p>
           </div>
         </div>
       </section>
 
-      {/* ── STATS ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 bg-white border-b border-hair border-sand">
-        {stats.map((s, i) => (
-          <div key={i} className={`py-9 px-8 text-center transition-colors hover:bg-cream ${i < 3 ? 'border-r border-hair border-sand' : ''}`}>
-            <div className="font-serif text-[40px] font-light text-espresso leading-none">{s.num}</div>
-            <div className="text-label uppercase tracking-widest text-text-light mt-2 leading-snug">{s.label}</div>
+      {/* TICKER */}
+      <div style={{ background: '#F5F0E8', borderBottom: '0.5px solid #D4C9B0', borderTop: '0.5px solid #D4C9B0', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+        <div style={{ display: 'inline-flex', gap: '4rem', padding: '1rem 2rem', animation: 'ticker 24s linear infinite' }}>
+          {[...manifesto, ...manifesto].map((line, i) => (
+            <span key={i} style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', fontWeight: 300, fontStyle: 'italic', color: '#4A3728', flexShrink: 0 }}>
+              {line}
+            </span>
+          ))}
+        </div>
+        <style>{`@keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }`}</style>
+      </div>
+
+      {/* STATS */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', background: '#FDFAF5', borderBottom: '0.5px solid #D4C9B0' }}>
+        {[
+          { num: '10',   label: 'Reservations to trigger production' },
+          { num: '0',    label: 'Items ever made without a buyer' },
+          { num: '100%', label: 'On-demand, no surplus, no waste' },
+          { num: '∞',    label: 'Pieces returned, repaired, reborn' },
+        ].map((s, i) => (
+          <div key={i} style={{ padding: '2.5rem 2rem', textAlign: 'center', borderRight: i < 3 ? '0.5px solid #D4C9B0' : 'none' }}>
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '44px', fontWeight: 300, color: '#2C1F14', lineHeight: 1 }}>{s.num}</div>
+            <div style={{ fontFamily: 'Jost, sans-serif', fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#8C7B6E', marginTop: '8px', lineHeight: 1.4 }}>{s.label}</div>
           </div>
         ))}
       </div>
 
-      {/* ── COLLECTION PREVIEW ── */}
-      <section className="px-6 md:px-20 py-16 md:py-24 bg-white">
-        <div className="flex items-end justify-between mb-14">
-          <h2 className="font-serif text-heading font-light text-espresso">The Collection</h2>
-          <Link href="/collection" className="text-label uppercase tracking-widest text-brown border-b border-brown pb-0.5 hover:opacity-60 transition-opacity">
-            View all pieces
+      {/* COLLECTION */}
+      <section style={{ padding: 'clamp(3rem,6vw,6rem) clamp(1.5rem,5vw,5rem)', background: '#FDFAF5' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '3rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <p style={{ fontFamily: 'Jost, sans-serif', fontSize: '10px', letterSpacing: '0.3em', textTransform: 'uppercase', color: '#7A5C45', marginBottom: '0.75rem' }}>Open for reservation</p>
+            <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(32px,4vw,52px)', fontWeight: 300, color: '#2C1F14', lineHeight: 1.05 }}>The Collection</h2>
+          </div>
+          <Link href="/collection" style={{ fontFamily: 'Jost, sans-serif', fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#7A5C45', textDecoration: 'none', borderBottom: '0.5px solid #7A5C45', paddingBottom: '2px' }}>
+            View all pieces →
           </Link>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-7">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: '1.5rem' }}>
           {items.map((p) => (
-            <Link key={p.slug} href={`/collection/${p.slug}`} className="product-card group no-underline">
-              <div style={{ aspectRatio: '3/4', overflow: 'hidden', marginBottom: '14px', position: 'relative', background: 'var(--color-oatmeal)' }}>
+            <Link key={p.slug} href={`/collection/${p.slug}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+              <div style={{ background: '#E8E0D0', aspectRatio: '3/4', overflow: 'hidden', marginBottom: '1rem', position: 'relative' }}>
                 {p.images && p.images.length > 0 ? (
-                  <img
-                    src={p.images[0]}
-                    alt={p.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.4s ease' }}
-                  />
+                  <img src={p.images[0]} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.5s ease' }} />
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ width: '60px', height: '100px', background: 'var(--color-espresso-mid)', borderRadius: '30px 30px 4px 4px', opacity: 0.4 }} />
+                    <div style={{ width: '60px', height: '100px', background: '#4A3728', borderRadius: '30px 30px 4px 4px', opacity: 0.4 }} />
                   </div>
                 )}
+                {p.status === 'preorder' && (
+                  <div style={{ position: 'absolute', top: '12px', left: '12px', background: '#2C1F14', color: '#F5F0E8', fontFamily: 'Jost, sans-serif', fontSize: '8px', letterSpacing: '0.2em', textTransform: 'uppercase', padding: '4px 10px' }}>Pre-order</div>
+                )}
+                {p.status === 'in_production' && (
+                  <div style={{ position: 'absolute', top: '12px', left: '12px', background: '#3B6D11', color: '#EAF3DE', fontFamily: 'Jost, sans-serif', fontSize: '8px', letterSpacing: '0.2em', textTransform: 'uppercase', padding: '4px 10px' }}>In Production</div>
+                )}
               </div>
-              <p style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 400, color: 'var(--color-espresso)', marginBottom: '4px' }}>{p.name}</p>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '13px', color: 'var(--color-text-light)', fontWeight: 300 }}>${p.price.toLocaleString()}</span>
-                <span style={{ fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--color-brown)' }}>{p.material}</span>
+              <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', fontWeight: 400, color: '#2C1F14', marginBottom: '4px' }}>{p.name}</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ fontFamily: 'Jost, sans-serif', fontSize: '13px', color: '#8C7B6E', fontWeight: 300 }}>${p.price.toLocaleString()}</span>
+                <span style={{ fontFamily: 'Jost, sans-serif', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#7A5C45' }}>{p.material}</span>
               </div>
+              {p.status === 'preorder' && p.preorder_count != null && p.preorder_target != null && (
+                <div>
+                  <div style={{ height: '2px', background: '#E8E0D0', borderRadius: '1px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${Math.min((p.preorder_count / p.preorder_target) * 100, 100)}%`, background: '#7A5C45', borderRadius: '1px' }} />
+                  </div>
+                  <p style={{ fontFamily: 'Jost, sans-serif', fontSize: '9px', color: '#8C7B6E', marginTop: '4px', fontWeight: 300 }}>{p.preorder_count} of {p.preorder_target} reserved</p>
+                </div>
+              )}
             </Link>
           ))}
         </div>
       </section>
 
-      {/* ── PROCESS (dark) ── */}
-      <section className="bg-espresso px-6 md:px-20 py-16 md:py-24 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-20 items-center">
-        <div>
-          <span className="text-label uppercase tracking-widest text-sand block mb-5">How It Works</span>
-          <h2 className="font-serif text-heading font-light text-cream leading-tight">
-            Fashion made in<br /><em className="italic text-sand">the right order.</em>
+      {/* HOW IT WORKS */}
+      <section style={{ background: '#2C1F14', padding: 'clamp(3rem,6vw,6rem) clamp(1.5rem,5vw,5rem)' }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <p style={{ fontFamily: 'Jost, sans-serif', fontSize: '10px', letterSpacing: '0.4em', textTransform: 'uppercase', color: '#7A5C45', marginBottom: '1.5rem' }}>The model</p>
+          <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(36px,5vw,64px)', fontWeight: 300, color: '#F5F0E8', lineHeight: 1.05, marginBottom: '4rem' }}>
+            Five steps.<br /><em style={{ fontStyle: 'italic', color: '#D4C9B0' }}>Zero leftovers.</em>
           </h2>
-          <p className="text-body text-sand mt-6 max-w-sm">
-            The fashion industry overproduces by billions of items every year. We do the opposite — nothing is made until it's already sold.
-          </p>
-          <Link href="/collection" className="btn-primary mt-10 inline-block" style={{ background: '#F5F0E8', color: '#2C1F14' }}>
-            See Open Pre-orders
-          </Link>
-        </div>
-        <div className="flex flex-col gap-6">
-          {[
-            ['01', 'Reserve your piece',        'Choose what you want and place a pre-order. No charge yet — you\'re just reserving your spot.'],
-            ['02', 'We reach 10 orders',         'Once 10 people reserve the same piece, the run is confirmed. You get notified immediately.'],
-            ['03', 'Fabric is purchased',        'We buy exactly the fabric needed for those 10 pieces. Not one metre more. Then it goes to our artisan partners.'],
-            ['04', 'Made & delivered to you',    'Each piece is handcrafted and shipped directly to the people who ordered it. No stock, no storage, no waste.'],
-          ].map(([num, title, desc]) => (
-            <div key={num} className="p-7 border border-espresso-mid hover:border-brown transition-colors">
-              <div className="flex gap-6 items-start">
-                <span className="font-serif text-4xl font-light text-sand opacity-60 leading-none min-w-[40px]">{num}</span>
-                <div>
-                  <p className="font-serif text-xl text-cream mb-1">{title}</p>
-                  <p className="text-caption text-text-light leading-relaxed">{desc}</p>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {steps.map((step, i) => (
+              <div key={step.num} style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '2rem', padding: '2rem 0', borderTop: '0.5px solid #3A2A1C' }}>
+                <span style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '48px', fontWeight: 300, color: '#3A2A1C', lineHeight: 1 }}>{step.num}</span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div>
+                    <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', color: '#F5F0E8', marginBottom: '6px' }}>{step.title}</p>
+                    <p style={{ fontFamily: 'Jost, sans-serif', fontSize: '13px', color: '#6B5544', lineHeight: 1.7, fontWeight: 300, maxWidth: '480px' }}>{step.desc}</p>
+                  </div>
+                  {i === steps.length - 1 && (
+                    <Link href="/collection" style={{ background: '#F5F0E8', color: '#2C1F14', padding: '12px 28px', textDecoration: 'none', fontFamily: 'Jost, sans-serif', fontSize: '10px', letterSpacing: '0.3em', textTransform: 'uppercase', flexShrink: 0 }}>
+                      Reserve Now
+                    </Link>
+                  )}
                 </div>
               </div>
+            ))}
+            <div style={{ borderTop: '0.5px solid #3A2A1C' }} />
+          </div>
+        </div>
+      </section>
+
+      {/* QUOTE */}
+      <section style={{ background: '#F5F0E8', padding: 'clamp(4rem,8vw,8rem) clamp(1.5rem,5vw,5rem)', textAlign: 'center' }}>
+        <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(22px,4vw,48px)', fontWeight: 300, color: '#2C1F14', lineHeight: 1.3, maxWidth: '800px', margin: '0 auto 2rem', fontStyle: 'italic' }}>
+          "The most sustainable garment is the one made for someone who actually wants it — not one hoping to find a home after the fact."
+        </p>
+        <p style={{ fontFamily: 'Jost, sans-serif', fontSize: '10px', letterSpacing: '0.3em', textTransform: 'uppercase', color: '#8C7B6E' }}>Unweave, 2026</p>
+      </section>
+
+      {/* WHY IT MATTERS */}
+      <section style={{ background: '#FDFAF5', padding: 'clamp(3rem,6vw,6rem) clamp(1.5rem,5vw,5rem)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: '2px' }}>
+          {[
+            { label: 'The problem', title: 'Fashion makes 30% more than it sells.', desc: 'Every year, billions of garments are manufactured, shipped, and discarded — never worn, never wanted. The industry calls it inventory risk. We call it a design flaw.' },
+            { label: 'Our fix', title: 'We produce after demand, not before.', desc: 'No forecasting. No surplus. No sales. When 10 people reserve a piece, we buy exactly that fabric, cut exactly those patterns, and make exactly those garments. Nothing more.' },
+            { label: 'Your role', title: 'Your reservation is an act of creation.', desc: 'When you pre-order from Unweave, you\'re not buying a product that exists. You\'re commissioning one into existence. That changes what fashion can be.' },
+          ].map((card) => (
+            <div key={card.label} style={{ background: '#FDFAF5', padding: 'clamp(2rem,4vw,3.5rem)', border: '0.5px solid #E8E0D0' }}>
+              <p style={{ fontFamily: 'Jost, sans-serif', fontSize: '9px', letterSpacing: '0.3em', textTransform: 'uppercase', color: '#7A5C45', marginBottom: '0.75rem' }}>{card.label}</p>
+              <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', fontWeight: 400, color: '#2C1F14', marginBottom: '1rem', lineHeight: 1.2 }}>{card.title}</h3>
+              <p style={{ fontFamily: 'Jost, sans-serif', fontSize: '13px', color: '#8C7B6E', lineHeight: 1.8, fontWeight: 300 }}>{card.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ── VALUES ── */}
-      <section className="px-6 md:px-20 py-16 md:py-24 bg-cream">
-        <div className="text-center mb-10 md:mb-16">
-          <span className="section-tag">Why pre-order fashion</span>
-          <h2 className="font-serif text-heading font-light text-espresso">The only model where<br />zero waste is <em className="italic">guaranteed.</em></h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-px">
-          {values.map((v) => (
-            <div key={v.title} className="bg-white p-8 md:p-12 border border-hair border-sand hover:bg-cream transition-colors">
-              <div className="mb-7">{v.icon}</div>
-              <h3 className="font-serif text-2xl font-normal text-espresso mb-4">{v.title}</h3>
-              <p className="text-body text-text-light">{v.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── FOOTER ── */}
-      <footer className="bg-espresso px-6 md:px-20 pt-14 md:pt-20 pb-8 md:pb-10">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-14 pb-10 md:pb-14 border-b border-espresso-mid">
+      {/* FOOTER */}
+      <footer style={{ background: '#2C1F14', padding: 'clamp(3rem,6vw,5rem) clamp(1.5rem,5vw,5rem) 2rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: '3rem', paddingBottom: '3rem', borderBottom: '0.5px solid #3A2A1C', marginBottom: '2rem' }}>
           <div>
-            <span className="font-serif text-2xl font-light tracking-[0.3em] uppercase text-cream block mb-5">Unweave</span>
-            <p className="text-caption text-text-light leading-relaxed max-w-[220px]">Fashion made to order. We buy fabric only after your pre-order is confirmed. Zero stock, zero waste.</p>
+            <span style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 300, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#F5F0E8', display: 'block', marginBottom: '1rem' }}>Unweave</span>
+            <p style={{ fontFamily: 'Jost, sans-serif', fontSize: '12px', color: '#6B5544', lineHeight: 1.75, fontWeight: 300, maxWidth: '220px' }}>Fashion made only when someone wants it. Pre-order, then we produce.</p>
           </div>
           {[
-            { title: 'Shop',     links: ['New Arrivals','Outerwear','Dresses','Accessories','Deadstock Edit'] },
-            { title: 'Platform', links: ['Virtual Try-On','Fashion AI School','Community','Vibe Coding'] },
-            { title: 'Values',   links: ['Our Process','Circularity','Artisan Map','Repair Programme','Impact Report'] },
+            { title: 'Shop', links: ['New Arrivals','Outerwear','Dresses','Sets','Accessories'] },
+            { title: 'About', links: ['Our Model','Sustainability','Artisan Partners','Material Sourcing'] },
+            { title: 'Help', links: ['How Pre-orders Work','Shipping','Returns & Repairs','Contact'] },
           ].map(col => (
             <div key={col.title}>
-              <span className="text-label uppercase tracking-widest text-sand block mb-6">{col.title}</span>
-              <ul className="flex flex-col gap-3 list-none">
+              <span style={{ fontFamily: 'Jost, sans-serif', fontSize: '9px', letterSpacing: '0.3em', textTransform: 'uppercase', color: '#D4C9B0', display: 'block', marginBottom: '1.25rem' }}>{col.title}</span>
+              <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {col.links.map(l => (
-                  <li key={l}>
-                    <Link href="#" className="text-caption text-text-light hover:text-cream transition-colors no-underline">{l}</Link>
-                  </li>
+                  <li key={l}><Link href="#" style={{ fontFamily: 'Jost, sans-serif', fontSize: '12px', color: '#6B5544', textDecoration: 'none', fontWeight: 300 }}>{l}</Link></li>
                 ))}
               </ul>
             </div>
           ))}
         </div>
-        <div className="flex justify-between items-center pt-8 flex-wrap gap-4">
-          <span className="text-caption text-text-light">© 2026 Unweave. All rights reserved.</span>
-          <span className="text-[11px] text-brown tracking-wider">B Corp Certified · 0% Landfill · Carbon Neutral Shipping</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <span style={{ fontFamily: 'Jost, sans-serif', fontSize: '11px', color: '#4A3728', fontWeight: 300 }}>© 2026 Unweave. All rights reserved.</span>
+          <span style={{ fontFamily: 'Jost, sans-serif', fontSize: '11px', color: '#7A5C45', letterSpacing: '0.1em' }}>Zero stock · Zero surplus · Zero waste</span>
         </div>
       </footer>
     </main>

@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useCartStore } from '../store/cartStore'
 
 type Props = {
@@ -9,6 +10,35 @@ type Props = {
 
 export default function CartDrawer({ open, onClose }: Props) {
   const { items, removeItem, updateQty, total, clearCart } = useCartStore()
+  const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState<string | null>(null)
+
+  async function handleCheckout() {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: items.map(i => ({
+            name:     i.product.name,
+            price:    i.product.price,
+            quantity: i.quantity,
+            image:    i.product.images?.[0],
+          })),
+          successUrl: `${window.location.origin}/checkout/success`,
+          cancelUrl:  `${window.location.origin}/collection`,
+        }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      window.location.href = data.url
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Something went wrong')
+      setLoading(false)
+    }
+  }
 
   return (
     <>
@@ -165,8 +195,24 @@ export default function CartDrawer({ open, onClose }: Props) {
                 ${total().toLocaleString()}
               </span>
             </div>
-            <button className="btn-primary" style={{ width: '100%', textAlign: 'center' }}>
-              Proceed to Checkout
+
+            {error && (
+              <p style={{ fontSize: '12px', color: '#E24B4A', marginBottom: '12px', textAlign: 'center' }}>
+                {error}
+              </p>
+            )}
+
+            <button
+              onClick={handleCheckout}
+              disabled={loading}
+              className="btn-primary"
+              style={{
+                width: '100%', textAlign: 'center',
+                opacity: loading ? 0.7 : 1,
+                cursor: loading ? 'wait' : 'pointer',
+              }}
+            >
+              {loading ? 'Redirecting...' : 'Proceed to Checkout'}
             </button>
             <button
               onClick={clearCart}

@@ -1,18 +1,13 @@
 import Navbar from '../components/Navbar'
 import Link from 'next/link'
+import { createClient } from '../lib/supabase/server'
+import type { Product } from '../lib/types'
 
 const stats = [
   { num: '0g',   label: 'Fabric waste per garment' },
   { num: '100%', label: 'Deadstock & natural fibres' },
   { num: '340+', label: 'Certified artisan partners' },
   { num: '∞',    label: 'Repair & return programme' },
-]
-
-const products = [
-  { name: 'Oatmeal Trench Coat', price: '$2,450', material: 'Deadstock Linen',    slug: 'oatmeal-trench-coat',  badge: 'New' },
-  { name: 'Refined Column Dress',price: '$1,890', material: 'Organic Wool',       slug: 'refined-column-dress', badge: null },
-  { name: 'Tailored Suit Set',   price: '$3,200', material: 'Repurposed Tweed',   slug: 'tailored-suit-set',    badge: null },
-  { name: 'Arc Shoulder Bag',    price: '$890',   material: 'Vegetable-Tanned',   slug: 'arc-shoulder-bag',     badge: null },
 ]
 
 const values = [
@@ -47,7 +42,16 @@ const values = [
   },
 ]
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await createClient()
+  const { data: products } = await supabase
+    .from('products')
+    .select('*')
+    .eq('in_stock', true)
+    .order('created_at', { ascending: false })
+    .limit(4)
+
+  const items: Product[] = products ?? []
   return (
     <main>
       <Navbar />
@@ -155,22 +159,25 @@ export default function HomePage() {
           </Link>
         </div>
         <div className="grid grid-cols-4 gap-7">
-          {products.map((p) => (
+          {items.map((p) => (
             <Link key={p.slug} href={`/collection/${p.slug}`} className="product-card group no-underline">
-              <div className="product-card-img relative">
-                <div className="w-full h-full flex items-center justify-center">
-                  <div className="w-20 h-36 bg-espresso-mid rounded-t-full opacity-70 group-hover:opacity-80 transition-opacity" />
-                </div>
-                {p.badge && (
-                  <span className="absolute top-4 left-4 bg-espresso text-cream text-[8px] tracking-widest uppercase px-3 py-1">
-                    {p.badge}
-                  </span>
+              <div style={{ aspectRatio: '3/4', overflow: 'hidden', marginBottom: '14px', position: 'relative', background: 'var(--color-oatmeal)' }}>
+                {p.images && p.images.length > 0 ? (
+                  <img
+                    src={p.images[0]}
+                    alt={p.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.4s ease' }}
+                  />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: '60px', height: '100px', background: 'var(--color-espresso-mid)', borderRadius: '30px 30px 4px 4px', opacity: 0.4 }} />
+                  </div>
                 )}
               </div>
-              <p className="font-serif text-lg font-normal text-espresso">{p.name}</p>
-              <div className="flex justify-between items-center mt-1">
-                <span className="text-caption text-text-light">{p.price}</span>
-                <span className="text-[9px] tracking-widest uppercase text-brown">{p.material}</span>
+              <p style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 400, color: 'var(--color-espresso)', marginBottom: '4px' }}>{p.name}</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: 'var(--color-text-light)', fontWeight: 300 }}>${p.price.toLocaleString()}</span>
+                <span style={{ fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--color-brown)' }}>{p.material}</span>
               </div>
             </Link>
           ))}
@@ -200,7 +207,7 @@ export default function HomePage() {
           ].map(([num, title, desc]) => (
             <div key={num} className="p-7 border border-espresso-mid hover:border-brown transition-colors">
               <div className="flex gap-6 items-start">
-                <span className="font-serif text-4xl font-light text-sand opacity-60 leading-none min-w-[40px]">{num}</span>
+                <span className="font-serif text-4xl font-light text-sand opacity-60 leading-none min-w-10">{num}</span>
                 <div>
                   <p className="font-serif text-xl text-cream mb-1">{title}</p>
                   <p className="text-caption text-text-light leading-relaxed">{desc}</p>
@@ -233,7 +240,7 @@ export default function HomePage() {
         <div className="grid grid-cols-4 gap-14 pb-14 border-b border-espresso-mid">
           <div>
             <span className="font-serif text-2xl font-light tracking-[0.3em] uppercase text-cream block mb-5">Unweave</span>
-            <p className="text-caption text-text-light leading-relaxed max-w-[220px]">Zero waste fashion platform. Circular by design, curated by AI, made by artisans.</p>
+            <p className="text-caption text-text-light leading-relaxed max-w-55">Zero waste fashion platform. Circular by design, curated by AI, made by artisans.</p>
           </div>
           {[
             { title: 'Shop',     links: ['New Arrivals','Outerwear','Dresses','Accessories','Deadstock Edit'] },

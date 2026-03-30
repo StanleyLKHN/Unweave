@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from 'next'
-import dynamic from 'next/dynamic'
+import ChatWrapper from '../components/ChatWrapper'
 import './globals.css'
-
-const ChatWrapper = dynamic(() => import('../components/ChatWrapper'), { ssr: false })
 
 export const metadata: Metadata = {
   title: 'Unweave — Zero Waste Fashion',

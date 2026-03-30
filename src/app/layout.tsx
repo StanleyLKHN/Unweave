@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from 'next'
-import ChatWrapper from '../components/ChatWrapper'
+import dynamic from 'next/dynamic'
 import './globals.css'
+
+const ChatWrapper = dynamic(() => import('../components/ChatWrapper'), { ssr: false })
+const BottomNav   = dynamic(() => import('../components/BottomNav'),   { ssr: false })
 
 export const metadata: Metadata = {
   title: 'Unweave — Zero Waste Fashion',
@@ -20,11 +23,7 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
@@ -33,7 +32,11 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body>
-        {children}
+        {/* Bottom padding on mobile so content isn't hidden behind BottomNav */}
+        <div className="pb-0 md:pb-0" style={{ paddingBottom: 'var(--bottom-nav-height, 0)' }}>
+          {children}
+        </div>
+        <BottomNav />
         <ChatWrapper />
         <script dangerouslySetInnerHTML={{
           __html: `
@@ -42,6 +45,8 @@ export default function RootLayout({
                 navigator.serviceWorker.register('/sw.js')
               })
             }
+            // Set bottom nav height CSS var
+            document.documentElement.style.setProperty('--bottom-nav-height', '64px');
           `
         }} />
       </body>

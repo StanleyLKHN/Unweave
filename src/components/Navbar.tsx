@@ -40,7 +40,7 @@ export default function Navbar() {
   return (
     <>
       <nav className="sticky top-0 z-50 bg-white border-b border-hair border-sand">
-        <div className="flex items-center justify-between px-6 md:px-16 py-5 md:py-6">
+        <div className="hidden md:flex items-center justify-between px-16 py-6">
 
           <Link href="/" className="font-serif text-lg font-light tracking-[0.3em] uppercase text-espresso no-underline">
             Unweave
@@ -109,7 +109,7 @@ export default function Navbar() {
             {/* Install button in mobile menu */}
             {showInstall && (
               <button
-                onClick={handleInstall}
+                onClick={(e) => { e.stopPropagation(); handleInstall() }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
                   background: 'var(--color-espresso)', color: 'var(--color-cream)',

@@ -74,7 +74,7 @@ export default async function HomePage() {
           </p>
           <div className="flex items-center gap-8 animate-fade-up animation-delay-550">
             <Link href="/collection" className="btn-primary">Reserve a Piece</Link>
-            <Link href="/process" className="btn-text">How It Works</Link>
+            <Link href="/collection" className="btn-text">How It Works ↓</Link>
           </div>
         </div>
 
@@ -154,7 +154,7 @@ export default async function HomePage() {
           <p className="text-body text-sand mt-6 max-w-sm">
             The fashion industry overproduces by billions of items every year. We do the opposite — nothing is made until it's already sold.
           </p>
-          <Link href="/collection" className="btn-primary mt-10 inline-block" style={{ background: 'var(--cream)', color: 'var(--espresso)' }}>
+          <Link href="/collection" className="btn-primary mt-10 inline-block" style={{ background: '#F5F0E8', color: '#2C1F14' }}>
             See Open Pre-orders
           </Link>
         </div>

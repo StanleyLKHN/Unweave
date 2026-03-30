@@ -16,6 +16,7 @@ export default function ProductPage() {
   const addItem = useCartStore(s => s.addItem)
   const [cartOpen, setCartOpen] = useState(false)
   const [added, setAdded] = useState(false)
+  const [activeImg, setActiveImg] = useState(0)
 
   function handleAddToCart() {
     if (!product) return
@@ -56,33 +57,113 @@ export default function ProductPage() {
       {!loading && !error && product && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: '90vh', background: 'var(--color-white)' }}>
 
-          {/* Image side */}
-          <div style={{
-            background: 'var(--color-oatmeal)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            position: 'relative', minHeight: '600px', overflow: 'hidden',
-          }}>
-            {product.images && product.images.length > 0 ? (
-              <img
-                src={product.images[0]}
-                alt={product.name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }}
-              />
-            ) : (
-              <svg width="200" height="360" viewBox="0 0 200 360" fill="none">
-                <path d="M44 86 C33 134 28 224 30 332 L170 332 C172 224 167 134 156 86 C146 60 128 48 100 45 C72 48 54 60 44 86Z" fill="#C8B898"/>
-                <path d="M100 48 L82 90 L100 100 L118 90Z" fill="#E8DFC8"/>
-                <rect x="32" y="200" width="136" height="10" rx="5" fill="#8A7858"/>
-              </svg>
-            )}
-            {product.is_zero_waste && (
+          {/* Image gallery */}
+          <div style={{ display: 'flex', gap: '12px', minHeight: '600px' }}>
+
+            {/* Thumbnails column */}
+            {product.images && product.images.length > 1 && (
               <div style={{
-                position: 'absolute', top: '32px', left: '32px', zIndex: 1,
-                background: 'var(--color-espresso)', color: 'var(--color-cream)',
-                fontSize: '8px', letterSpacing: '0.25em', textTransform: 'uppercase',
-                padding: '6px 14px', fontFamily: 'var(--font-sans)',
-              }}>Zero Waste</div>
+                display: 'flex', flexDirection: 'column', gap: '8px',
+                width: '72px', flexShrink: 0, padding: '16px 0 16px 16px',
+                background: 'var(--color-oatmeal)',
+              }}>
+                {product.images.map((img, i) => (
+                  <div
+                    key={i}
+                    onClick={() => setActiveImg(i)}
+                    style={{
+                      width: '56px', height: '72px', cursor: 'pointer',
+                      overflow: 'hidden', flexShrink: 0,
+                      border: activeImg === i
+                        ? '1.5px solid #2C1F14'
+                        : '1.5px solid transparent',
+                      opacity: activeImg === i ? 1 : 0.6,
+                      transition: 'opacity 0.2s, border-color 0.2s',
+                    }}
+                  >
+                    <img
+                      src={img}
+                      alt={`${product.name} ${i + 1}`}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  </div>
+                ))}
+              </div>
             )}
+
+            {/* Main image */}
+            <div style={{
+              flex: 1, background: 'var(--color-oatmeal)',
+              position: 'relative', overflow: 'hidden',
+            }}>
+              {product.images && product.images.length > 0 ? (
+                <img
+                  src={product.images[activeImg]}
+                  alt={product.name}
+                  style={{
+                    width: '100%', height: '100%',
+                    objectFit: 'cover', position: 'absolute', inset: 0,
+                    transition: 'opacity 0.3s',
+                  }}
+                />
+              ) : (
+                <div style={{
+                  width: '100%', height: '100%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <div style={{
+                    width: '80px', height: '160px',
+                    background: '#C8B898', borderRadius: '40px 40px 8px 8px', opacity: 0.6,
+                  }} />
+                </div>
+              )}
+              {product.is_zero_waste && (
+                <div style={{
+                  position: 'absolute', top: '20px', left: '20px', zIndex: 1,
+                  background: 'var(--color-espresso)', color: 'var(--color-cream)',
+                  fontSize: '8px', letterSpacing: '0.25em', textTransform: 'uppercase',
+                  padding: '6px 14px', fontFamily: 'var(--font-sans)',
+                }}>Zero Waste</div>
+              )}
+
+              {/* Arrow navigation if multiple images */}
+              {product.images && product.images.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setActiveImg(i => Math.max(0, i - 1))}
+                    disabled={activeImg === 0}
+                    style={{
+                      position: 'absolute', left: '12px', top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'rgba(253,250,245,0.9)', border: 'none',
+                      width: '36px', height: '36px', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      opacity: activeImg === 0 ? 0.3 : 1, transition: 'opacity 0.2s',
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2C1F14" strokeWidth="1.5" strokeLinecap="round">
+                      <path d="M15 18l-6-6 6-6"/>
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setActiveImg(i => Math.min(product.images.length - 1, i + 1))}
+                    disabled={activeImg === product.images.length - 1}
+                    style={{
+                      position: 'absolute', right: '12px', top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'rgba(253,250,245,0.9)', border: 'none',
+                      width: '36px', height: '36px', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      opacity: activeImg === product.images.length - 1 ? 0.3 : 1, transition: 'opacity 0.2s',
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2C1F14" strokeWidth="1.5" strokeLinecap="round">
+                      <path d="M9 18l6-6-6-6"/>
+                    </svg>
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Details side */}

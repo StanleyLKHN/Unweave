@@ -15,17 +15,14 @@ export default function Navbar() {
   const count = useCartStore(s => s.count)()
 
   useEffect(() => {
-    // Already installed
     if (window.matchMedia('(display-mode: standalone)').matches) return
-
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent)
     setIsIOS(ios)
-    if (ios) { setShowInstall(true); return }
+    setShowInstall(true)
 
     const handler = (e: any) => {
       e.preventDefault()
       setDeferredPrompt(e)
-      setShowInstall(true)
     }
     window.addEventListener('beforeinstallprompt', handler)
     return () => window.removeEventListener('beforeinstallprompt', handler)

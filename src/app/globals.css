@@ -93,3 +93,111 @@
 .animation-delay-250      { animation-delay: 0.25s; }
 .animation-delay-400      { animation-delay: 0.4s; }
 .animation-delay-550      { animation-delay: 0.55s; }
+
+/* ── MOBILE ── */
+@media (max-width: 768px) {
+
+  /* Hero — stack vertically */
+  .grid.grid-cols-2.min-h-screen {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Hero left padding */
+  .flex.flex-col.justify-center.px-20.py-24 {
+    padding: 3rem 1.5rem !important;
+  }
+
+  /* Hero right image — fixed height on mobile */
+  .relative.bg-oatmeal.flex.items-center.justify-center.overflow-hidden {
+    min-height: 60vw !important;
+    height: 70vw !important;
+  }
+
+  /* Stats bar — 2 columns */
+  .grid.grid-cols-4.bg-white {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Collection section padding */
+  .px-20.py-24 {
+    padding: 2.5rem 1.5rem !important;
+  }
+
+  /* Collection grid — 2 columns on mobile */
+  .grid.grid-cols-4.gap-7 {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 1rem !important;
+  }
+
+  /* Process section — stack */
+  .bg-espresso.px-20.py-24.grid.grid-cols-2 {
+    grid-template-columns: 1fr !important;
+    padding: 2.5rem 1.5rem !important;
+    gap: 2rem !important;
+  }
+
+  /* Values — single column */
+  .grid.grid-cols-3.gap-px {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Values card padding */
+  .bg-white.p-12 {
+    padding: 2rem 1.5rem !important;
+  }
+
+  /* Footer */
+  .bg-espresso.px-20.pt-20.pb-10 {
+    padding: 3rem 1.5rem 2rem !important;
+  }
+
+  .grid.grid-cols-4.gap-14 {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 2rem !important;
+  }
+
+  /* Nav */
+  nav .px-16 {
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+  }
+
+  /* Product page — stack */
+  .grid.grid-cols-2.min-h-screen {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Product page details padding */
+  .px-20 {
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+  }
+
+  /* Cart drawer — full width on mobile */
+  .cart-drawer {
+    width: 100% !important;
+  }
+
+  /* Collection page header */
+  .px-20.py-24.bg-cream,
+  .px-20.py-24.bg-white {
+    padding: 2rem 1.25rem !important;
+  }
+}
+
+/* ── TABLET ── */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .px-20 {
+    padding-left: 2.5rem !important;
+    padding-right: 2.5rem !important;
+  }
+
+  .grid.grid-cols-4.gap-7 {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 1.25rem !important;
+  }
+
+  .grid.grid-cols-2.min-h-screen {
+    min-height: auto !important;
+  }
+}

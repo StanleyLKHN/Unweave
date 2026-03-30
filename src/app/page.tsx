@@ -57,10 +57,10 @@ export default async function HomePage() {
       <Navbar />
 
       {/* ── HERO ── */}
-      <section className="grid grid-cols-2 min-h-screen bg-white">
+      <section className="grid grid-cols-1 md:grid-cols-2 min-h-screen bg-white">
 
         {/* Left */}
-        <div className="flex flex-col justify-center px-20 py-24">
+        <div className="flex flex-col justify-center px-6 md:px-20 py-16 md:py-24">
           <p className="section-tag animate-fade-up animation-delay-100">
             Made to order. Zero waste.
           </p>
@@ -101,7 +101,7 @@ export default async function HomePage() {
       </section>
 
       {/* ── STATS ── */}
-      <div className="grid grid-cols-4 bg-white border-b border-hair border-sand">
+      <div className="grid grid-cols-2 md:grid-cols-4 bg-white border-b border-hair border-sand">
         {stats.map((s, i) => (
           <div key={i} className={`py-9 px-8 text-center transition-colors hover:bg-cream ${i < 3 ? 'border-r border-hair border-sand' : ''}`}>
             <div className="font-serif text-[40px] font-light text-espresso leading-none">{s.num}</div>
@@ -111,14 +111,14 @@ export default async function HomePage() {
       </div>
 
       {/* ── COLLECTION PREVIEW ── */}
-      <section className="px-20 py-24 bg-white">
+      <section className="px-6 md:px-20 py-16 md:py-24 bg-white">
         <div className="flex items-end justify-between mb-14">
           <h2 className="font-serif text-heading font-light text-espresso">The Collection</h2>
           <Link href="/collection" className="text-label uppercase tracking-widest text-brown border-b border-brown pb-0.5 hover:opacity-60 transition-opacity">
             View all pieces
           </Link>
         </div>
-        <div className="grid grid-cols-4 gap-7">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-7">
           {items.map((p) => (
             <Link key={p.slug} href={`/collection/${p.slug}`} className="product-card group no-underline">
               <div style={{ aspectRatio: '3/4', overflow: 'hidden', marginBottom: '14px', position: 'relative', background: 'var(--color-oatmeal)' }}>
@@ -145,7 +145,7 @@ export default async function HomePage() {
       </section>
 
       {/* ── PROCESS (dark) ── */}
-      <section className="bg-espresso px-20 py-24 grid grid-cols-2 gap-20 items-center">
+      <section className="bg-espresso px-6 md:px-20 py-16 md:py-24 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-20 items-center">
         <div>
           <span className="text-label uppercase tracking-widest text-sand block mb-5">How It Works</span>
           <h2 className="font-serif text-heading font-light text-cream leading-tight">
@@ -179,14 +179,14 @@ export default async function HomePage() {
       </section>
 
       {/* ── VALUES ── */}
-      <section className="px-20 py-24 bg-cream">
-        <div className="text-center mb-16">
+      <section className="px-6 md:px-20 py-16 md:py-24 bg-cream">
+        <div className="text-center mb-10 md:mb-16">
           <span className="section-tag">Why pre-order fashion</span>
           <h2 className="font-serif text-heading font-light text-espresso">The only model where<br />zero waste is <em className="italic">guaranteed.</em></h2>
         </div>
-        <div className="grid grid-cols-3 gap-px">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-px">
           {values.map((v) => (
-            <div key={v.title} className="bg-white p-12 border border-hair border-sand hover:bg-cream transition-colors">
+            <div key={v.title} className="bg-white p-8 md:p-12 border border-hair border-sand hover:bg-cream transition-colors">
               <div className="mb-7">{v.icon}</div>
               <h3 className="font-serif text-2xl font-normal text-espresso mb-4">{v.title}</h3>
               <p className="text-body text-text-light">{v.desc}</p>
@@ -196,8 +196,8 @@ export default async function HomePage() {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="bg-espresso px-20 pt-20 pb-10">
-        <div className="grid grid-cols-4 gap-14 pb-14 border-b border-espresso-mid">
+      <footer className="bg-espresso px-6 md:px-20 pt-14 md:pt-20 pb-8 md:pb-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-14 pb-10 md:pb-14 border-b border-espresso-mid">
           <div>
             <span className="font-serif text-2xl font-light tracking-[0.3em] uppercase text-cream block mb-5">Unweave</span>
             <p className="text-caption text-text-light leading-relaxed max-w-[220px]">Fashion made to order. We buy fabric only after your pre-order is confirmed. Zero stock, zero waste.</p>

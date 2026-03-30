@@ -55,7 +55,12 @@ export default function ProductPage() {
 
       {/* Product */}
       {!loading && !error && product && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: '90vh', background: 'var(--color-white)' }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 480px), 1fr))',
+          minHeight: '90vh',
+          background: 'var(--color-white)',
+        }}>
 
           {/* Image gallery */}
           <div style={{ display: 'flex', gap: '12px', minHeight: '600px' }}>
@@ -168,7 +173,7 @@ export default function ProductPage() {
 
           {/* Details side */}
           <div style={{
-            padding: '80px 72px',
+            padding: 'clamp(2rem, 5vw, 80px) clamp(1.25rem, 5vw, 72px)',
             display: 'flex', flexDirection: 'column', justifyContent: 'center',
           }}>
             {/* Breadcrumb */}

@@ -26,7 +26,7 @@ export default function CollectionPage() {
       <div style={{
         background: 'var(--color-white)',
         borderBottom: '0.5px solid var(--color-sand)',
-        padding: '64px 80px 48px',
+        padding: 'clamp(2rem, 5vw, 64px) clamp(1.25rem, 5vw, 80px) clamp(1.5rem, 4vw, 48px)',
       }}>
         <span className="section-tag">Zero Waste Collection</span>
         <h1 style={{
@@ -67,11 +67,11 @@ export default function CollectionPage() {
       </div>
 
       {/* Product grid */}
-      <div style={{ padding: '56px 80px', background: 'var(--color-cream)' }}>
+      <div style={{ padding: 'clamp(2rem, 5vw, 56px) clamp(1.25rem, 5vw, 80px)', background: 'var(--color-cream)' }}>
 
         {/* Loading state */}
         {loading && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '28px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '28px' }}>
             {[...Array(4)].map((_, i) => (
               <div key={i}>
                 <div style={{
@@ -107,7 +107,7 @@ export default function CollectionPage() {
 
         {/* Products */}
         {!loading && !error && products.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '28px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '28px' }}>
             {products.map(product => (
               <Link
                 key={product.id}

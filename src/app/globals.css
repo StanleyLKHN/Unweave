@@ -1,0 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@200;300;400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-cream:        #F5F0E8;
+  --color-white:        #FDFAF5;
+  --color-oatmeal:      #E8E0D0;
+  --color-sand:         #D4C9B0;
+  --color-espresso:     #2C1F14;
+  --color-espresso-mid: #4A3728;
+  --color-brown:        #7A5C45;
+  --color-text-light:   #8C7B6E;
+
+  --font-serif: 'Cormorant Garamond', Georgia, serif;
+  --font-sans:  'Jost', system-ui, sans-serif;
+}
+
+@layer base {
+  html { scroll-behavior: smooth; }
+
+  body {
+    background-color: var(--color-cream);
+    color: var(--color-espresso);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 { font-family: var(--font-serif); }
+}
+
+@layer components {
+  .btn-primary {
+    background-color: var(--color-espresso);
+    color: var(--color-cream);
+    font-family: var(--font-sans);
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    padding: 15px 36px;
+    border: none;
+    cursor: pointer;
+    font-weight: 400;
+    transition: background-color 0.2s;
+    display: inline-block;
+    text-decoration: none;
+  }
+  .btn-primary:hover { background-color: var(--color-espresso-mid); }
+
+  .btn-text {
+    background: none;
+    border: none;
+    color: var(--color-espresso-mid);
+    font-family: var(--font-sans);
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    transition: color 0.2s;
+  }
+  .btn-text:hover { color: var(--color-espresso); }
+
+  .nav-link {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-espresso-mid);
+    text-decoration: none;
+    font-weight: 300;
+    transition: color 0.2s;
+  }
+  .nav-link:hover { color: var(--color-espresso); }
+
+  .section-tag {
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--color-brown);
+    font-weight: 400;
+    display: block;
+    margin-bottom: 1.25rem;
+  }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-up          { animation: fadeUp 0.8s ease both; }
+.animation-delay-100      { animation-delay: 0.1s; }
+.animation-delay-250      { animation-delay: 0.25s; }
+.animation-delay-400      { animation-delay: 0.4s; }
+.animation-delay-550      { animation-delay: 0.55s; }

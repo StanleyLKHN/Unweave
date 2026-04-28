@@ -32,7 +32,7 @@ export default function HomePage() {
       <Navbar />
 
       {/* HERO */}
-      <section style={{ minHeight: '70svh', background: '#2C1F14', display: 'grid', gridTemplateColumns: '1fr 1fr', position: 'relative', overflow: 'hidden' }}>
+      <section style={{ minHeight: '70vh', background: '#2C1F14', display: 'grid', gridTemplateColumns: '1fr 1fr', position: 'relative', overflow: 'hidden' }}>
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: 'clamp(2rem,5vw,5rem)', paddingBottom: 'clamp(3rem,6vw,6rem)', position: 'relative', zIndex: 2 }}>
           <p style={{ fontFamily: 'Jost, sans-serif', fontSize: '10px', letterSpacing: '0.4em', textTransform: 'uppercase', color: '#7A5C45', marginBottom: '2rem', fontWeight: 400 }}>
             Pre-order fashion

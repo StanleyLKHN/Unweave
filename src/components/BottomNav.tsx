@@ -97,7 +97,7 @@ export default function BottomNav() {
 
   return (
     <>
-      <nav className="md:hidden" style={{ position:'fixed', bottom:0, left:0, right:0, background:'#FDFAF5', borderTop:'0.5px solid #D4C9B0', display:'flex', zIndex:100, paddingBottom:'env(safe-area-inset-bottom)' }}>
+      <nav className="bottom-nav-mobile" style={{ position:'fixed', bottom:0, left:0, right:0, background:'#FDFAF5', borderTop:'0.5px solid #D4C9B0', zIndex:100, paddingBottom:'env(safe-area-inset-bottom)' }}>
         {tabs.map(tab => {
           const active = pathname === tab.href || (tab.href === '/collection' && pathname.startsWith('/collection'))
           return (
@@ -142,6 +142,15 @@ export default function BottomNav() {
           </div>
         </div>
       )}
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          .bottom-nav-mobile { display: flex; }
+          @media (min-width: 768px) {
+            .bottom-nav-mobile { display: none !important; }
+          }
+        `
+      }} />
     </>
   )
 }

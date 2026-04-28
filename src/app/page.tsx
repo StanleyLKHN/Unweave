@@ -32,17 +32,19 @@ export default function HomePage() {
       <Navbar />
 
       {/* HERO */}
-      <section style={{ minHeight: '70vh', background: '#2C1F14', display: 'grid', gridTemplateColumns: '1fr 1fr', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: 'clamp(2rem,5vw,5rem)', paddingBottom: 'clamp(3rem,6vw,6rem)', position: 'relative', zIndex: 2 }}>
-          <p style={{ fontFamily: 'Jost, sans-serif', fontSize: '10px', letterSpacing: '0.4em', textTransform: 'uppercase', color: '#7A5C45', marginBottom: '2rem', fontWeight: 400 }}>
+      <section className="hero-section" style={{ height: '70svh', minHeight: '500px', maxHeight: '800px', background: '#2C1F14', display: 'flex', position: 'relative', overflow: 'hidden' }}>
+
+        {/* Left column — text */}
+        <div className="hero-left" style={{ width: '50%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: 'clamp(2rem,4vw,4rem)', position: 'relative', zIndex: 2 }}>
+          <p style={{ fontFamily: 'Jost, sans-serif', fontSize: '10px', letterSpacing: '0.4em', textTransform: 'uppercase', color: '#7A5C45', marginBottom: '1.5rem', fontWeight: 400 }}>
             Pre-order fashion
           </p>
-          <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(48px,7vw,96px)', fontWeight: 300, lineHeight: 0.95, color: '#F5F0E8', marginBottom: '2rem', letterSpacing: '-1px' }}>
+          <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(40px,5.5vw,76px)', fontWeight: 300, lineHeight: 0.95, color: '#F5F0E8', marginBottom: '1.5rem', letterSpacing: '-1px' }}>
             Nothing is made<br />
             until someone<br />
             <em style={{ fontStyle: 'italic', color: '#D4C9B0' }}>wants it.</em>
           </h1>
-          <p style={{ fontFamily: 'Jost, sans-serif', fontSize: 'clamp(13px,1.5vw,15px)', lineHeight: 1.8, color: '#8C7B6E', maxWidth: '360px', marginBottom: '3rem', fontWeight: 300 }}>
+          <p style={{ fontFamily: 'Jost, sans-serif', fontSize: 'clamp(13px,1.2vw,14px)', lineHeight: 1.7, color: '#8C7B6E', maxWidth: '360px', marginBottom: '2rem', fontWeight: 300 }}>
             Unweave is a zero-waste fashion label built on one rule — we only produce what has already been reserved. Ten pre-orders. Then we buy the fabric. Not before.
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', flexWrap: 'wrap' }}>
@@ -55,19 +57,21 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div style={{ position: 'relative', overflow: 'hidden' }}>
+        {/* Right column — image */}
+        <div className="hero-right" style={{ width: '50%', position: 'relative', overflow: 'hidden' }}>
           <img
             src="/products/oatmeal-trench.png"
             alt="Unweave"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block', opacity: 0.85 }}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block', opacity: 0.85, position: 'absolute', inset: 0 }}
           />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, #2C1F14 0%, transparent 40%)' }} />
-          <div style={{ position: 'absolute', bottom: '2.5rem', right: '2.5rem', background: 'rgba(44,31,20,0.88)', padding: '1.25rem 1.75rem', borderLeft: '2px solid #7A5C45' }}>
+          <div style={{ position: 'absolute', bottom: '2rem', right: '2rem', background: 'rgba(44,31,20,0.88)', padding: '1.25rem 1.75rem', borderLeft: '2px solid #7A5C45', zIndex: 2 }}>
             <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '32px', fontWeight: 300, color: '#F5F0E8', lineHeight: 1 }}>7 / 10</p>
             <p style={{ fontFamily: 'Jost, sans-serif', fontSize: '9px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#7A5C45', marginTop: '4px' }}>Reserved — 3 spots left</p>
             <p style={{ fontFamily: 'Jost, sans-serif', fontSize: '11px', color: '#D4C9B0', marginTop: '6px', fontWeight: 300 }}>Oatmeal Trench · $2,450</p>
           </div>
         </div>
+
       </section>
 
       {/* TICKER */}

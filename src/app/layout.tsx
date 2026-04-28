@@ -29,8 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body suppressHydrationWarning>
-        {/* Bottom padding on mobile so content isn't hidden behind BottomNav */}
-        <div style={{ paddingBottom: 'var(--bottom-nav-height, 0)' }}>
+        <div className="page-wrapper">
           {children}
         </div>
         <ChatWrapper />
@@ -41,8 +40,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 navigator.serviceWorker.register('/sw.js')
               })
             }
-            // Set bottom nav height CSS var
-            document.documentElement.style.setProperty('--bottom-nav-height', '64px');
+          `
+        }} />
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            .page-wrapper { padding-bottom: 64px; }
+            @media (min-width: 768px) {
+              .page-wrapper { padding-bottom: 0; }
+            }
           `
         }} />
       </body>

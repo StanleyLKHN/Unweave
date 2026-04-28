@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '../lib/supabase/client'
+import { products as allProducts } from '../lib/products-data'
 import type { Product } from '../lib/types'
 
 export function useProducts(category?: string) {
@@ -10,29 +10,20 @@ export function useProducts(category?: string) {
   const [error, setError]       = useState<string | null>(null)
 
   useEffect(() => {
-    async function fetch() {
-      setLoading(true)
-      const supabase = createClient()
+    setLoading(true)
+    try {
+      const filtered = allProducts
+        .filter(p => p.in_stock)
+        .filter(p => !category || p.category === category)
+        .sort((a, b) => b.created_at.localeCompare(a.created_at))
 
-      let query = supabase
-        .from('products')
-        .select('*')
-        .eq('in_stock', true)
-        .order('created_at', { ascending: false })
-
-      if (category) {
-        query = query.eq('category', category)
-      }
-
-      const { data, error } = await query
-
-      if (error) setError(error.message)
-      else setProducts(data ?? [])
-
+      setProducts(filtered)
+      setError(null)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unknown error')
+    } finally {
       setLoading(false)
     }
-
-    fetch()
   }, [category])
 
   return { products, loading, error }
@@ -44,23 +35,18 @@ export function useProduct(slug: string) {
   const [error, setError]     = useState<string | null>(null)
 
   useEffect(() => {
-    async function fetch() {
-      setLoading(true)
-      const supabase = createClient()
+    setLoading(true)
+    const found = allProducts.find(p => p.slug === slug)
 
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('slug', slug)
-        .single()
-
-      if (error) setError(error.message)
-      else setProduct(data)
-
-      setLoading(false)
+    if (found) {
+      setProduct(found)
+      setError(null)
+    } else {
+      setProduct(null)
+      setError('Product not found')
     }
 
-    fetch()
+    setLoading(false)
   }, [slug])
 
   return { product, loading, error }

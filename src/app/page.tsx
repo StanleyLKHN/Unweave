@@ -1,6 +1,6 @@
 import Navbar from '../components/Navbar'
 import Link from 'next/link'
-import { createClient } from '../lib/supabase/server'
+import { products as allProducts } from '../lib/products-data'
 import type { Product } from '../lib/types'
 
 const steps = [
@@ -21,16 +21,11 @@ const manifesto = [
   'That\'s the whole model.',
 ]
 
-export default async function HomePage() {
-  const supabase = await createClient()
-  const { data: products } = await supabase
-    .from('products')
-    .select('*')
-    .eq('in_stock', true)
-    .order('created_at', { ascending: false })
-    .limit(4)
-
-  const items: Product[] = products ?? []
+export default function HomePage() {
+  const items: Product[] = allProducts
+    .filter(p => p.in_stock)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .slice(0, 4)
 
   return (
     <main>
@@ -62,7 +57,7 @@ export default async function HomePage() {
 
         <div style={{ position: 'relative', overflow: 'hidden' }}>
           <img
-            src="https://uffgbzoapueylgsffehj.supabase.co/storage/v1/object/public/products/uw_1.png"
+            src="/products/oatmeal-trench.png"
             alt="Unweave"
             style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block', opacity: 0.85 }}
           />

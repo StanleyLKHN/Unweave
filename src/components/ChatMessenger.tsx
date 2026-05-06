@@ -48,35 +48,35 @@ export default function ChatMessenger() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, typing])
 
-  function agentReply(userText: string) {
-    setTyping(true)
-    setTimeout(() => {
-      setTyping(false)
-      const lower = userText.toLowerCase()
-      let reply = 'Thanks for your message! Our team will get back to you shortly. In the meantime, feel free to browse the collection.'
-
-      if (lower.includes('try-on') || lower.includes('ar') || lower.includes('virtual')) {
-        reply = 'Our virtual try-on uses AI to simulate how each garment drapes on your body in real time — no filters, just accurate fit. Tap "Try-On" in the nav to get started with your measurements.'
-      } else if (lower.includes('zero waste') || lower.includes('process') || lower.includes('circular')) {
-        reply = 'Every Unweave piece starts with AI pattern nesting — we map 100% of the fabric before a single cut. Offcuts don\'t exist. What remains seeds the next collection. You can read the full process on our Process page.'
-      } else if (lower.includes('collection') || lower.includes('new') || lower.includes('piece')) {
-        reply = 'The new collection features the Oatmeal Trench in deadstock linen, a refined column dress in organic wool, and the Arc shoulder bag in vegetable-tanned leather. All zero off-cuts.'
-      } else if (lower.includes('price') || lower.includes('cost') || lower.includes('how much')) {
-        reply = 'Our pieces range from $890 for accessories to $3,200 for tailored sets. Every price reflects fair artisan wages, certified materials, and a lifetime repair guarantee.'
-      } else if (lower.includes('shipping') || lower.includes('deliver')) {
-        reply = 'We ship carbon-neutral globally. All packaging is compostable. Delivery takes 5–10 business days, with express options available at checkout.'
-      } else if (lower.includes('return') || lower.includes('repair')) {
-        reply = 'We offer a lifetime repair programme — if anything wears out, we fix it free of charge. At end of life, return the garment and we\'ll regenerate the fabric into a new piece.'
-      }
-
-      setMessages(prev => [...prev, {
-        id: Date.now(),
-        from: 'agent',
-        text: reply,
-        time: now(),
-      }])
-    }, 1200)
+  async function agentReply(userText: string) {
+  setTyping(true)
+  try {
+    const res = await fetch('/api/agents/customer-reply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: userText,
+        customerEmail: null, // later: pass real user email from auth
+      }),
+    })
+    const data = await res.json()
+    setMessages(prev => [...prev, {
+      id: Date.now(),
+      from: 'agent',
+      text: data.reply,
+      time: now(),
+    }])
+  } catch {
+    setMessages(prev => [...prev, {
+      id: Date.now(),
+      from: 'agent',
+      text: 'Sorry, something went wrong. Please try again.',
+      time: now(),
+    }])
+  } finally {
+    setTyping(false)
   }
+}
 
   function send(text?: string) {
     const msg = text ?? input.trim()

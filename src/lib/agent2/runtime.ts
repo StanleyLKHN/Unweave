@@ -1,16 +1,19 @@
 // =========================================================================
 // Agent 2 runtime
 //
-// One-shot agent: takes no user input, just runs to completion and emits
-// status events the dashboard renders as a live progress feed. The final
-// "done" event carries the new report id so the page can refresh to it.
+// One-shot agent: takes no user input, runs to completion, emits status
+// events the dashboard renders as a live progress feed. The final "done"
+// event carries the new report id so the page can refresh to it.
+//
+// All three tools (web_search, list_products, save_report) are local — the
+// runtime treats them uniformly. Same loop you'd use in any tool-use agent.
 // =========================================================================
 
 import Anthropic from '@anthropic-ai/sdk'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { MODEL, MAX_TOKENS, MAX_TOOL_TURNS, SYSTEM_PROMPT } from './prompt'
-import { TOOL_DEFINITIONS, isLocalTool, runLocalTool, type ToolContext } from './tools'
+import { TOOL_DEFINITIONS, runTool, SEARCH_BUDGET_DEFAULT, type ToolContext } from './tools'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -25,6 +28,7 @@ export type Agent2Event =
 const STATUS_LABEL: Record<string, string> = {
   list_products: 'Pulling the active catalog…',
   save_report:   'Saving the finished report…',
+  web_search:    'Searching the web…',
 }
 
 export async function* runAgent2(args: {
@@ -33,8 +37,11 @@ export async function* runAgent2(args: {
 }): AsyncGenerator<Agent2Event> {
   const { supabase, trigger } = args
 
-  const reportRef: ToolContext['reportRef'] = { id: null, productCount: 0, trendCount: 0 }
-  const ctx: ToolContext = { supabase, reportRef }
+  const ctx: ToolContext = {
+    supabase,
+    reportRef: { id: null, productCount: 0, trendCount: 0 },
+    searchBudget: { used: 0, max: SEARCH_BUDGET_DEFAULT },
+  }
 
   yield {
     type: 'status',
@@ -57,35 +64,23 @@ export async function* runAgent2(args: {
       messages,
     })
 
-    // Emit a status event the moment a server-side tool block opens — gives
-    // students a visible "the agent is searching the web" beat.
-    let inputJsonAcc = ''
-    let inputJsonToolName = ''
+    // Surface tool inputs for nice UI: when a tool_use block opens we know
+    // its name; when its input arrives as JSON deltas we parse the search
+    // query so the dashboard can show "Searching: 'linen ss26'" live.
+    let inputJson = ''
+    let activeTool = ''
 
     for await (const event of stream) {
-      if (event.type === 'content_block_start') {
-        const block = event.content_block
-        if (block.type === 'server_tool_use' && block.name === 'web_search') {
-          inputJsonToolName = 'web_search'
-          inputJsonAcc = ''
-        } else if (block.type === 'tool_use') {
-          yield { type: 'tool_use', name: block.name, label: STATUS_LABEL[block.name] ?? `Running ${block.name}…` }
-        } else if (block.type === 'web_search_tool_result') {
-          const content = block.content
-          const count = Array.isArray(content) ? content.length : 0
-          yield { type: 'tool_result', name: 'web_search', summary: count ? `${count} results` : 'no results' }
-        }
-      } else if (event.type === 'content_block_delta' && event.delta.type === 'input_json_delta') {
-        // Web-search query is streamed as JSON deltas — accumulate, then
-        // surface the actual search string the moment we have it.
-        inputJsonAcc += event.delta.partial_json
-        if (inputJsonToolName === 'web_search') {
-          const m = inputJsonAcc.match(/"query"\s*:\s*"([^"]*)"/)
-          if (m) {
-            yield { type: 'search', query: m[1] }
-            inputJsonToolName = ''
-            inputJsonAcc = ''
-          }
+      if (event.type === 'content_block_start' && event.content_block.type === 'tool_use') {
+        activeTool = event.content_block.name
+        inputJson = ''
+        yield { type: 'tool_use', name: activeTool, label: STATUS_LABEL[activeTool] ?? `Running ${activeTool}…` }
+      } else if (event.type === 'content_block_delta' && event.delta.type === 'input_json_delta' && activeTool === 'web_search') {
+        inputJson += event.delta.partial_json
+        const m = inputJson.match(/"query"\s*:\s*"([^"]*)"/)
+        if (m) {
+          yield { type: 'search', query: m[1] }
+          activeTool = ''   // emit the search event only once per call
         }
       }
     }
@@ -96,12 +91,12 @@ export async function* runAgent2(args: {
     if (final.stop_reason !== 'tool_use') {
       // Either save_report was already called (reportRef.id is set) or the
       // agent gave up without producing one.
-      if (reportRef.id) {
+      if (ctx.reportRef.id) {
         yield {
           type: 'done',
-          reportId: reportRef.id,
-          productCount: reportRef.productCount,
-          trendCount: reportRef.trendCount,
+          reportId: ctx.reportRef.id,
+          productCount: ctx.reportRef.productCount,
+          trendCount: ctx.reportRef.trendCount,
         }
         return
       }
@@ -109,20 +104,14 @@ export async function* runAgent2(args: {
       return
     }
 
-    // Run any LOCAL tool calls. Server tools (web_search) were already
-    // resolved by Anthropic and their results are in final.content already.
-    const localCalls = final.content.filter(
-      (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use' && isLocalTool(b.name),
+    // Run every tool call from this turn, then feed results back.
+    const calls = final.content.filter(
+      (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use',
     )
 
-    if (localCalls.length === 0) {
-      // Server tool turn only — keep looping; Claude will continue.
-      continue
-    }
-
     const toolResults: Anthropic.ToolResultBlockParam[] = []
-    for (const tu of localCalls) {
-      const out = await runLocalTool(tu.name, tu.input, ctx)
+    for (const tu of calls) {
+      const out = await runTool(tu.name, tu.input, ctx)
       yield { type: 'tool_result', name: tu.name, summary: out.summary }
       toolResults.push({ type: 'tool_result', tool_use_id: tu.id, content: out.result })
     }

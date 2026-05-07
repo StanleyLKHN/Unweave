@@ -1,13 +1,10 @@
 // =========================================================================
 // Agent 2 tools
 //
-// Two LOCAL tools that we implement here:
-//   • list_products — gives the agent the current catalog
-//   • save_report   — the structured deliverable: agent dumps everything in
-//                     one schema-validated call, we persist to two tables
-//
-// One SERVER tool we just declare — Anthropic runs it on their side:
-//   • web_search    — live fashion trend research
+// Three LOCAL tools — we implement all of them here, including web search,
+// which calls Tavily's REST API. Going through Tavily (instead of letting
+// Anthropic do it server-side) shows how to wire ANY external API as a tool:
+// describe it, validate input via input_schema, fetch, return structured text.
 // =========================================================================
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -19,6 +16,8 @@ export type ToolContext = {
   supabase: SupabaseClient
   // Filled in by save_report and read by the route after the agent finishes.
   reportRef: { id: string | null; productCount: number; trendCount: number }
+  // Per-run budget so the agent can't burn through Tavily quota in a loop.
+  searchBudget: { used: number; max: number }
 }
 
 type ToolInput = Record<string, unknown>
@@ -27,6 +26,76 @@ type ToolResult = { result: string; summary: string }
 type LocalTool = {
   definition: Anthropic.Tool
   handler: (input: ToolInput, ctx: ToolContext) => Promise<ToolResult>
+}
+
+// --------------------------------------------------------------------------
+// web_search — Tavily-backed
+// --------------------------------------------------------------------------
+const webSearch: LocalTool = {
+  definition: {
+    name: 'web_search',
+    description:
+      'Search the live web for current fashion trend signal via Tavily. Use this 3–6 times per report with focused queries — broader is worse than narrower. Returns title, url, and a content snippet for each result; cite the urls in your trend_highlights.source_urls.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'A focused search query, ~3–8 words. Example: "linen colour trend SS26".' },
+        depth: { type: 'string', enum: ['basic', 'advanced'], description: 'Use "advanced" for editorial / runway analysis where you need deeper content; "basic" otherwise. Defaults to "basic".' },
+        max_results: { type: 'integer', minimum: 1, maximum: 10, description: 'How many results to return. Default 5.' },
+      },
+      required: ['query'],
+    },
+  },
+  async handler(input, { searchBudget }) {
+    const apiKey = process.env.TAVILY_API_KEY
+    if (!apiKey) {
+      return { result: 'TAVILY_API_KEY is not set on the server. Tell the operator to configure it, then save_report with whatever you already have.', summary: 'tavily not configured' }
+    }
+    if (searchBudget.used >= searchBudget.max) {
+      return { result: `Search budget exhausted (${searchBudget.max} queries used). Stop searching and call save_report with what you have.`, summary: 'budget exhausted' }
+    }
+    searchBudget.used += 1
+
+    const { query, depth, max_results } = input as { query: string; depth?: 'basic' | 'advanced'; max_results?: number }
+
+    let payload: { query: string; results: Array<{ title: string; url: string; content: string }> }
+    try {
+      const res = await fetch('https://api.tavily.com/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          query,
+          search_depth: depth ?? 'basic',
+          max_results: max_results ?? 5,
+          topic: 'general',
+        }),
+      })
+      if (!res.ok) {
+        const text = await res.text()
+        return { result: `Tavily error (${res.status}): ${text.slice(0, 300)}`, summary: 'tavily error' }
+      }
+      payload = await res.json()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'fetch failed'
+      return { result: `Tavily request failed: ${msg}`, summary: 'tavily request failed' }
+    }
+
+    if (!payload.results?.length) {
+      return { result: `No results for "${query}".`, summary: `0 results for "${query}"` }
+    }
+
+    const formatted = payload.results
+      .map(r => `• ${r.title}\n  ${r.url}\n  ${r.content.slice(0, 400)}`)
+      .join('\n\n')
+
+    return {
+      result: `Results for "${query}":\n\n${formatted}`,
+      summary: `${payload.results.length} results`,
+    }
+  },
 }
 
 // --------------------------------------------------------------------------
@@ -189,32 +258,21 @@ const saveReport: LocalTool = {
 // Exports
 // --------------------------------------------------------------------------
 
-const LOCAL_TOOLS: LocalTool[] = [listProducts, saveReport]
+const TOOLS: LocalTool[] = [webSearch, listProducts, saveReport]
 
-// Anthropic-side tool union: our local tools + the server-side web_search.
-// max_uses caps how many searches the model can run in one report.
-export const TOOL_DEFINITIONS: Anthropic.ToolUnion[] = [
-  ...LOCAL_TOOLS.map(t => t.definition),
-  {
-    type: 'web_search_20260209',
-    name: 'web_search',
-    max_uses: MAX_WEB_SEARCHES,
-  },
-]
+export const TOOL_DEFINITIONS: Anthropic.Tool[] = TOOLS.map(t => t.definition)
 
-const HANDLERS = new Map(LOCAL_TOOLS.map(t => [t.definition.name, t.handler]))
+const HANDLERS = new Map(TOOLS.map(t => [t.definition.name, t.handler]))
 
-export function isLocalTool(name: string): boolean {
-  return HANDLERS.has(name)
-}
+export const SEARCH_BUDGET_DEFAULT = MAX_WEB_SEARCHES
 
-export async function runLocalTool(
+export async function runTool(
   name: string,
   input: unknown,
   ctx: ToolContext,
 ): Promise<ToolResult> {
   const handler = HANDLERS.get(name)
-  if (!handler) return { result: `Unknown local tool: ${name}`, summary: 'unknown tool' }
+  if (!handler) return { result: `Unknown tool: ${name}`, summary: 'unknown tool' }
   try {
     return await handler((input ?? {}) as ToolInput, ctx)
   } catch (err) {

@@ -100,6 +100,66 @@ const webSearch: LocalTool = {
 }
 
 // --------------------------------------------------------------------------
+// tavily_image_search — Tavily (image results)
+//
+// Tavily's /search endpoint can return an `images` array when called with
+// `include_images: true`. We use that to pull a single fun palm-tree picture
+// for the report header. Different shape from web_search: we only need the
+// first URL, so we don't go through the snippet-formatting path.
+// --------------------------------------------------------------------------
+const tavilyImageSearch: LocalTool = {
+  definition: {
+    name: 'tavily_image_search',
+    description:
+      'Fetch ONE image URL via Tavily image search. Use exactly once near the end of the run to grab a palm-tree picture for the report header. Pass the returned URL into save_report.palm_image_url. Does not consume the web_search budget.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Image query, e.g. "palm tree".' },
+      },
+      required: ['query'],
+    },
+  },
+  async handler(input) {
+    const apiKey = process.env.TAVILY_API_KEY
+    if (!apiKey) {
+      return { result: 'TAVILY_API_KEY is not set on the server. Skip and omit palm_image_url in save_report.', summary: 'tavily not configured' }
+    }
+    const { query } = input as { query: string }
+    try {
+      const res = await fetch('https://api.tavily.com/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          query,
+          search_depth: 'basic',
+          max_results: 1,
+          include_images: true,
+          topic: 'general',
+        }),
+      })
+      if (!res.ok) {
+        const text = await res.text()
+        return { result: `Tavily error (${res.status}): ${text.slice(0, 300)}`, summary: 'tavily error' }
+      }
+      const payload = await res.json() as { images?: Array<string | { url: string }> }
+      const first = payload.images?.[0]
+      const url = typeof first === 'string' ? first : first?.url
+      if (!url) {
+        return { result: `No images found for "${query}". Omit palm_image_url in save_report.`, summary: '0 images' }
+      }
+      return { result: `Image URL for "${query}": ${url}\nPass this URL as palm_image_url in save_report.`, summary: 'image found' }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'fetch failed'
+      return { result: `Tavily request failed: ${msg}`, summary: 'tavily request failed' }
+    }
+  },
+}
+
+// --------------------------------------------------------------------------
 // generate_product_image — Replicate (Flux Schnell)
 //
 // Calls Replicate's sync endpoint with `Prefer: wait`. Flux Schnell finishes
@@ -247,6 +307,7 @@ type SaveReportInput = {
   brand_implications: string
   next_week_focus: string
   product_content: ProductContentInput[]
+  palm_image_url?: string
 }
 
 const saveReport: LocalTool = {
@@ -274,6 +335,7 @@ const saveReport: LocalTool = {
         },
         brand_implications: { type: 'string', description: 'One paragraph. How trends apply to Unweave specifically.' },
         next_week_focus: { type: 'string', description: 'One paragraph. Which product, which angle, what to push.' },
+        palm_image_url: { type: 'string', description: 'Image URL returned by tavily_image_search. Renders at the top of the report. Optional — omit if the search returned nothing.' },
         product_content: {
           type: 'array',
           description: 'One entry per active product slug. Cover all of them.',
@@ -317,6 +379,7 @@ const saveReport: LocalTool = {
         brand_implications: payload.brand_implications,
         next_week_focus: payload.next_week_focus,
         citations,
+        palm_image_url: payload.palm_image_url ?? null,
       })
       .select('id')
       .single()
@@ -372,9 +435,16 @@ const saveReport: LocalTool = {
 // Exports
 // --------------------------------------------------------------------------
 
-const TOOLS: LocalTool[] = [webSearch, listProducts, generateProductImage, saveReport]
+const TOOLS: LocalTool[] = [webSearch, listProducts, generateProductImage, tavilyImageSearch, saveReport]
 
 export const TOOL_DEFINITIONS: Anthropic.Tool[] = TOOLS.map(t => t.definition)
+
+// Cron runs skip the palm picture — it's a manual-only fun touch.
+export function buildToolDefinitions(trigger: 'manual' | 'cron'): Anthropic.Tool[] {
+  return TOOLS
+    .filter(t => trigger === 'manual' || t.definition.name !== 'tavily_image_search')
+    .map(t => t.definition)
+}
 
 const HANDLERS = new Map(TOOLS.map(t => [t.definition.name, t.handler]))
 

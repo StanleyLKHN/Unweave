@@ -25,6 +25,7 @@ export type Report = {
   brand_implications: string
   next_week_focus: string
   citations: string[]
+  palm_image_url: string | null
 }
 
 export type ProductContent = {
@@ -207,6 +208,18 @@ function EmptyState() {
 function ReportView({ report, productContent }: { report: Report; productContent: ProductContent[] }) {
   return (
     <>
+      {/* Palm picture — just for fun */}
+      {report.palm_image_url && (
+        <Section label="Palm of the week">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={report.palm_image_url}
+            alt="Palm tree"
+            style={{ width: '100%', maxHeight: '320px', objectFit: 'cover', display: 'block', border: '0.5px solid #D4C9B0' }}
+          />
+        </Section>
+      )}
+
       {/* Summary */}
       <Section label="Summary">
         <p style={paragraphStyle}>{report.summary}</p>

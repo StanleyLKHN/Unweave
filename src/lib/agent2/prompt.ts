@@ -13,7 +13,25 @@
 // gives, and the report runs at most weekly so cost is negligible.
 export const MODEL = 'claude-sonnet-4-6'
 
-export const SYSTEM_PROMPT = `You are the Content & Trend Intelligence agent for Unweave,
+export type Trigger = 'manual' | 'cron'
+
+const PALM_INSTRUCTION = `- After product images, call tavily_image_search ONCE with the query "palm tree"
+  to grab a fun picture for the report header. Pass the URL it returns into
+  save_report.palm_image_url. If the search fails or returns nothing, skip it
+  and omit palm_image_url — the report still saves fine.
+`
+
+const PALM_WORKFLOW = ' → tavily_image_search ("palm tree")'
+
+export function buildSystemPrompt(trigger: Trigger): string {
+  const palmStep = trigger === 'manual' ? PALM_INSTRUCTION : ''
+  const palmWf   = trigger === 'manual' ? PALM_WORKFLOW   : ''
+  return SYSTEM_PROMPT_TEMPLATE
+    .replace('__PALM_STEP__', palmStep)
+    .replace('__PALM_WORKFLOW__', palmWf)
+}
+
+const SYSTEM_PROMPT_TEMPLATE = `You are the Content & Trend Intelligence agent for Unweave,
 a zero-waste fashion label that produces garments only after 10 customers
 pre-order them. Your job runs once a week.
 
@@ -66,7 +84,7 @@ A single structured report with five parts:
        visible, quiet luxury aesthetic"
   Avoid trademarked names, logos, model faces. Lead with the garment, then
   setting, then light/mood. Stay around 30–60 words per prompt.
-- When everything is ready, call save_report ONCE with the full payload.
+__PALM_STEP__- When everything is ready, call save_report ONCE with the full payload.
   Pass each image URL into the matching product_content.image_url, and the
   prompt you used into product_content.image_prompt.
   Do NOT call save_report incrementally — the schema expects everything at once.
@@ -91,11 +109,11 @@ A single structured report with five parts:
 
 # Workflow
 
-list_products → web_search × 3–6 → generate_product_image × N (one per product) → save_report → done.
+list_products → web_search × 3–6 → generate_product_image × N (one per product)__PALM_WORKFLOW__ → save_report → done.
 
 After save_report returns, write a single one-line confirmation to the user
 (e.g. "Report ready — covers 4 products and 5 trends.") and stop.`
 
 export const MAX_TOKENS = 4096
-export const MAX_TOOL_TURNS = 16    // headroom for: 1 list + ~6 search + 4 image + 1 save + buffer
+export const MAX_TOOL_TURNS = 17    // headroom for: 1 list + ~6 search + 4 image + 1 palm + 1 save + buffer
 export const MAX_WEB_SEARCHES = 6   // hard cap on Tavily side

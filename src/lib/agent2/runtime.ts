@@ -12,8 +12,8 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-import { MODEL, MAX_TOKENS, MAX_TOOL_TURNS, SYSTEM_PROMPT } from './prompt'
-import { TOOL_DEFINITIONS, runTool, SEARCH_BUDGET_DEFAULT, type ToolContext } from './tools'
+import { MODEL, MAX_TOKENS, MAX_TOOL_TURNS, buildSystemPrompt } from './prompt'
+import { buildToolDefinitions, runTool, SEARCH_BUDGET_DEFAULT, type ToolContext } from './tools'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -30,6 +30,7 @@ const STATUS_LABEL: Record<string, string> = {
   save_report:             'Saving the finished report…',
   web_search:              'Searching the web…',
   generate_product_image:  'Generating image…',
+  tavily_image_search:     'Fetching a palm picture…',
 }
 
 export async function* runAgent2(args: {
@@ -49,6 +50,9 @@ export async function* runAgent2(args: {
     label: trigger === 'cron' ? 'Weekly run starting…' : 'Booting up the trend agent…',
   }
 
+  const systemPrompt = buildSystemPrompt(trigger)
+  const tools = buildToolDefinitions(trigger)
+
   const messages: Anthropic.MessageParam[] = [
     {
       role: 'user',
@@ -62,8 +66,8 @@ export async function* runAgent2(args: {
       const stream = anthropic.messages.stream({
         model: MODEL,
         max_tokens: MAX_TOKENS,
-        system: SYSTEM_PROMPT,
-        tools: TOOL_DEFINITIONS,
+        system: systemPrompt,
+        tools,
         messages,
       })
 

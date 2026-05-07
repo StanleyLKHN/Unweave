@@ -47,3 +47,6 @@ ALTER TABLE customer_messages
   ADD COLUMN IF NOT EXISTS chat_session_id   UUID REFERENCES chat_sessions(id),
   ADD COLUMN IF NOT EXISTS escalation_reason TEXT,
   ADD COLUMN IF NOT EXISTS escalation_priority TEXT;
+
+
+-- Link

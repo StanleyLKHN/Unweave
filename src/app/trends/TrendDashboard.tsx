@@ -118,7 +118,7 @@ export default function TrendDashboard({ initialReport, initialProductContent }:
             </h1>
             {initialReport && (
               <p style={{ fontFamily: 'Jost, sans-serif', fontSize: '12px', color: '#8C7B6E', letterSpacing: '0.05em' }}>
-                Generated {new Date(initialReport.generated_at).toLocaleString()} · {initialReport.model}
+                Generated {formatGeneratedAt(initialReport.generated_at)} · {initialReport.model}
               </p>
             )}
           </div>
@@ -344,4 +344,15 @@ function hostname(url: string): string {
   } catch {
     return url
   }
+}
+
+// Locale-agnostic format so server and client render byte-identical strings —
+// avoids React hydration mismatch (#418) when the host's locale or timezone
+// differs from the browser's. UTC is the lowest common denominator.
+function formatGeneratedAt(iso: string): string {
+  const d = new Date(iso)
+  const date = d.toISOString().slice(0, 10)
+  const hh = d.getUTCHours().toString().padStart(2, '0')
+  const mm = d.getUTCMinutes().toString().padStart(2, '0')
+  return `${date} ${hh}:${mm} UTC`
 }

@@ -97,5 +97,5 @@ After save_report returns, write a single one-line confirmation to the user
 (e.g. "Report ready — covers 4 products and 5 trends.") and stop.`
 
 export const MAX_TOKENS = 4096
-export const MAX_TOOL_TURNS = 8     // tool loop budget; web_search counts toward this
-export const MAX_WEB_SEARCHES = 6   // hard cap on Anthropic's side
+export const MAX_TOOL_TURNS = 16    // headroom for: 1 list + ~6 search + 4 image + 1 save + buffer
+export const MAX_WEB_SEARCHES = 6   // hard cap on Tavily side

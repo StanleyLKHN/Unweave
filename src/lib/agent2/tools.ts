@@ -11,6 +11,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type Anthropic from '@anthropic-ai/sdk'
 
 import { MAX_WEB_SEARCHES } from './prompt'
+import { products as staticProducts } from '../products-data'
 
 export type ToolContext = {
   supabase: SupabaseClient
@@ -100,6 +101,11 @@ const webSearch: LocalTool = {
 
 // --------------------------------------------------------------------------
 // list_products
+//
+// Reads from the static catalog file rather than Supabase. The brand's
+// catalog is small and changes via PR, not at runtime, so a file is the
+// honest source of truth. Demonstrates that a "tool" can wrap any data
+// source — DB, file, REST API, in-memory state.
 // --------------------------------------------------------------------------
 const listProducts: LocalTool = {
   definition: {
@@ -111,18 +117,23 @@ const listProducts: LocalTool = {
       properties: {},
     },
   },
-  async handler(_input, { supabase }) {
-    const { data, error } = await supabase
-      .from('products')
-      .select('slug, name, material, price, status, description, category, preorder_count, preorder_target')
-      .order('created_at', { ascending: false })
-
-    if (error) return { result: `Error: ${error.message}`, summary: 'catalog fetch failed' }
-    if (!data || data.length === 0) return { result: 'No products in catalog.', summary: 'catalog empty' }
-
+  async handler() {
+    if (staticProducts.length === 0) {
+      return { result: 'No products in catalog.', summary: 'catalog empty' }
+    }
+    const trimmed = staticProducts.map(p => ({
+      slug: p.slug,
+      name: p.name,
+      material: p.material,
+      price: p.price,
+      status: p.status,
+      category: p.category,
+      description: p.description,
+      preorder: `${p.preorder_count}/${p.preorder_target}`,
+    }))
     return {
-      result: JSON.stringify(data, null, 2),
-      summary: `${data.length} products`,
+      result: JSON.stringify(trimmed, null, 2),
+      summary: `${trimmed.length} products`,
     }
   },
 }
@@ -196,14 +207,10 @@ const saveReport: LocalTool = {
   async handler(input, { supabase, reportRef }) {
     const payload = input as unknown as SaveReportInput
 
-    // Need to enrich each product_content row with the human-readable name,
-    // so the /trends page can render without a join.
-    const slugs = payload.product_content.map(p => p.product_slug)
-    const { data: products } = await supabase
-      .from('products')
-      .select('slug, name')
-      .in('slug', slugs)
-    const slugToName = new Map((products ?? []).map(p => [p.slug, p.name as string]))
+    // Enrich each product_content row with the human-readable name so the
+    // /trends page can render without a join. Source: same static catalog
+    // list_products read from.
+    const slugToName = new Map(staticProducts.map(p => [p.slug, p.name]))
 
     // Deduplicated citations across all trend highlights.
     const citations = Array.from(

@@ -336,20 +336,34 @@ const saveReport: LocalTool = {
       image_prompt: p.image_prompt ?? null,
     }))
 
+    // The trend_reports row IS saved at this point. Even if product_content
+    // fails (typically: schema migration not run), we still set reportRef
+    // so the runtime treats the run as successful and the UI refreshes.
+    reportRef.id = report.id as string
+    reportRef.trendCount = payload.trend_highlights.length
+
+    let savedProducts = 0
+    let contentError: string | null = null
     if (rows.length) {
       const { error: contentErr } = await supabase.from('product_content').insert(rows)
       if (contentErr) {
-        return { result: `Saved report but failed to save product_content: ${contentErr.message}`, summary: 'partial save' }
+        contentError = contentErr.message
+      } else {
+        savedProducts = rows.length
+      }
+    }
+    reportRef.productCount = savedProducts
+
+    if (contentError) {
+      return {
+        result: `Saved report ${report.id} (${payload.trend_highlights.length} trends, ${citations.length} citations) but product_content insert failed: ${contentError}. Likely cause: image_url/image_prompt columns missing — run scripts/agent2-images.sql.`,
+        summary: `report saved · product_content failed (${contentError.slice(0, 60)})`,
       }
     }
 
-    reportRef.id = report.id as string
-    reportRef.productCount = rows.length
-    reportRef.trendCount = payload.trend_highlights.length
-
     return {
-      result: `Saved report ${report.id}. ${rows.length} product entries, ${payload.trend_highlights.length} trends, ${citations.length} citations.`,
-      summary: `report saved (${rows.length} products, ${payload.trend_highlights.length} trends)`,
+      result: `Saved report ${report.id}. ${savedProducts} product entries, ${payload.trend_highlights.length} trends, ${citations.length} citations.`,
+      summary: `report saved (${savedProducts} products, ${payload.trend_highlights.length} trends)`,
     }
   },
 }

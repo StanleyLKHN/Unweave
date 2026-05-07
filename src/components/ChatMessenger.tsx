@@ -7,6 +7,7 @@ type Message = {
   from: 'user' | 'agent'
   text: string
   time: string
+  toolStatus?: string
 }
 
 const initialMessages: Message[] = [
@@ -22,6 +23,8 @@ function now() {
   return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 const quickReplies = [
   'How does pre-order work?',
   'Tell me about zero waste',
@@ -32,13 +35,16 @@ export default function ChatMessenger() {
   const [open, setOpen]             = useState(false)
   const [messages, setMessages]     = useState<Message[]>(initialMessages)
   const [input, setInput]           = useState('')
-  const [typing, setTyping]         = useState(false)
+  const [streaming, setStreaming]   = useState(false)
   const [unread, setUnread]         = useState(1)
   const [email, setEmail]           = useState('')
   const [emailSubmitted, setEmailSubmitted] = useState(false)
   const bottomRef                   = useRef<HTMLDivElement>(null)
   const inputRef                    = useRef<HTMLInputElement>(null)
   const emailRef                    = useRef<HTMLInputElement>(null)
+
+  // Currently-streaming agent message (single in flight at a time).
+  const [pending, setPending] = useState<Message | null>(null)
 
   useEffect(() => {
     if (open) {
@@ -53,40 +59,74 @@ export default function ChatMessenger() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, typing])
+  }, [messages, pending])
 
   async function agentReply(userText: string) {
-    setTyping(true)
+    setStreaming(true)
+    const messageId = Date.now()
+    setPending({ id: messageId, from: 'agent', text: '', time: now() })
+
+    let buffer = ''
+    let acc = ''
+    let toolStatus: string | undefined
+
     try {
       const res = await fetch('/api/agents/customer-reply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: userText,
-          customerEmail: email || null,
-          subject: 'Chat message',
-        }),
+        body: JSON.stringify({ message: userText, customerEmail: email || null }),
+        credentials: 'same-origin',
       })
-      const data = await res.json()
-      setMessages(prev => [...prev, {
-        id: Date.now(),
-        from: 'agent',
-        text: data.reply,
-        time: now(),
-      }])
+      if (!res.body) throw new Error('No response stream')
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+
+        // SSE frames are separated by blank lines. Pull complete frames out;
+        // anything trailing stays in the buffer for the next iteration.
+        let nl
+        while ((nl = buffer.indexOf('\n\n')) !== -1) {
+          const frame = buffer.slice(0, nl)
+          buffer = buffer.slice(nl + 2)
+          const dataLine = frame.split('\n').find(l => l.startsWith('data: '))
+          if (!dataLine) continue
+          let payload: { type?: string; delta?: string; label?: string; summary?: string; message?: string }
+          try { payload = JSON.parse(dataLine.slice(6)) } catch { continue }
+
+          if (payload.type === 'text' && payload.delta) {
+            acc += payload.delta
+            toolStatus = undefined
+            setPending({ id: messageId, from: 'agent', text: acc, time: now() })
+          } else if (payload.type === 'tool_call' && payload.label) {
+            toolStatus = payload.label
+            setPending({ id: messageId, from: 'agent', text: acc, time: now(), toolStatus })
+          } else if (payload.type === 'tool_result') {
+            // Brief moment without status before next text/tool — clearing.
+            toolStatus = undefined
+            setPending({ id: messageId, from: 'agent', text: acc, time: now() })
+          } else if (payload.type === 'error' && payload.message) {
+            acc = acc || `Sorry, something went wrong: ${payload.message}`
+            setPending({ id: messageId, from: 'agent', text: acc, time: now() })
+          }
+        }
+      }
     } catch {
-      setMessages(prev => [...prev, {
-        id: Date.now(),
-        from: 'agent',
-        text: 'Sorry, something went wrong. Please try again.',
-        time: now(),
-      }])
+      acc = acc || 'Sorry, something went wrong. Please try again.'
     } finally {
-      setTyping(false)
+      const finalText = acc || 'Sorry, I didn\'t catch that. Could you try again?'
+      setMessages(prev => [...prev, { id: messageId, from: 'agent', text: finalText, time: now() }])
+      setPending(null)
+      setStreaming(false)
     }
   }
 
   function send(text?: string) {
+    if (streaming) return
     const msg = text ?? input.trim()
     if (!msg) return
     setInput('')
@@ -179,13 +219,13 @@ export default function ChatMessenger() {
               fontFamily: 'Jost, sans-serif', fontSize: '12px',
               color: 'var(--color-text-light)', textAlign: 'center', lineHeight: 1.6,
             }}>
-              Leave your email and we'll follow up if needed.
+              Leave your email and we&apos;ll follow up if needed.
             </p>
             <input
               ref={emailRef}
               value={email}
               onChange={e => setEmail(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && email.includes('@') && setEmailSubmitted(true)}
+              onKeyDown={e => e.key === 'Enter' && EMAIL_RE.test(email) && setEmailSubmitted(true)}
               placeholder="your@email.com"
               type="email"
               style={{
@@ -201,10 +241,10 @@ export default function ChatMessenger() {
               }}
             />
             <button
-              onClick={() => email.includes('@') && setEmailSubmitted(true)}
+              onClick={() => EMAIL_RE.test(email) && setEmailSubmitted(true)}
               style={{
                 width: '100%',
-                background: email.includes('@') ? 'var(--color-espresso)' : 'var(--color-sand)',
+                background: EMAIL_RE.test(email) ? 'var(--color-espresso)' : 'var(--color-sand)',
                 color: 'var(--color-cream)',
                 border: 'none',
                 padding: '12px',
@@ -212,7 +252,7 @@ export default function ChatMessenger() {
                 fontSize: '10px',
                 letterSpacing: '0.2em',
                 textTransform: 'uppercase',
-                cursor: email.includes('@') ? 'pointer' : 'default',
+                cursor: EMAIL_RE.test(email) ? 'pointer' : 'default',
                 transition: 'background 0.2s',
               }}
             >
@@ -285,30 +325,50 @@ export default function ChatMessenger() {
                 </div>
               ))}
 
-              {/* Typing indicator */}
-              {typing && (
+              {/* Streaming agent message (live) */}
+              {pending && (
                 <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
                   <div style={{
-                    width: '26px', height: '26px', borderRadius: '50%',
+                    width: '26px', height: '26px', borderRadius: '50%', flexShrink: 0,
                     background: 'var(--color-espresso)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontFamily: 'var(--font-serif)', fontSize: '11px', color: 'var(--color-cream)',
                   }}>U</div>
-                  <div style={{
-                    padding: '10px 16px',
-                    background: 'var(--color-white)',
-                    border: '0.5px solid var(--color-sand)',
-                    borderRadius: '0 10px 10px 10px',
-                    display: 'flex', gap: '4px', alignItems: 'center',
-                  }}>
-                    {[0, 1, 2].map(i => (
-                      <div key={i} style={{
-                        width: '6px', height: '6px', borderRadius: '50%',
-                        background: 'var(--color-text-light)',
-                        animation: 'typingBounce 1.2s ease infinite',
-                        animationDelay: `${i * 0.2}s`,
-                      }} />
-                    ))}
+                  <div style={{ maxWidth: '78%' }}>
+                    {pending.toolStatus && (
+                      <p style={{
+                        fontSize: '10px', color: 'var(--color-text-light)',
+                        letterSpacing: '0.05em', marginBottom: '4px',
+                        fontStyle: 'italic',
+                      }}>{pending.toolStatus}</p>
+                    )}
+                    {pending.text ? (
+                      <div style={{
+                        padding: '10px 14px',
+                        background: 'var(--color-white)',
+                        color: 'var(--color-espresso)',
+                        fontSize: '13px', lineHeight: '1.6', fontWeight: 300,
+                        border: '0.5px solid var(--color-sand)',
+                        borderRadius: '0 10px 10px 10px',
+                      }}>{pending.text}<span style={{ opacity: 0.4 }}>▍</span></div>
+                    ) : (
+                      <div style={{
+                        padding: '10px 16px',
+                        background: 'var(--color-white)',
+                        border: '0.5px solid var(--color-sand)',
+                        borderRadius: '0 10px 10px 10px',
+                        display: 'flex', gap: '4px', alignItems: 'center',
+                      }}>
+                        {[0, 1, 2].map(i => (
+                          <div key={i} style={{
+                            width: '6px', height: '6px', borderRadius: '50%',
+                            background: 'var(--color-text-light)',
+                            animation: 'typingBounce 1.2s ease infinite',
+                            animationDelay: `${i * 0.2}s`,
+                          }} />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -350,28 +410,30 @@ export default function ChatMessenger() {
                 ref={inputRef}
                 value={input}
                 onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && send()}
-                placeholder="Message Unweave..."
+                onKeyDown={e => e.key === 'Enter' && !streaming && send()}
+                disabled={streaming}
+                placeholder={streaming ? 'Agent is replying…' : 'Message Unweave...'}
                 style={{
                   flex: 1,
                   border: '0.5px solid var(--color-sand)',
-                  background: 'var(--color-cream)',
+                  background: streaming ? 'var(--color-sand)' : 'var(--color-cream)',
                   color: 'var(--color-espresso)',
                   fontFamily: 'var(--font-sans)',
                   fontSize: '13px',
                   fontWeight: 300,
                   padding: '10px 14px',
                   outline: 'none',
+                  opacity: streaming ? 0.6 : 1,
                 }}
               />
               <button
                 onClick={() => send()}
-                disabled={!input.trim()}
+                disabled={!input.trim() || streaming}
                 style={{
-                  background: input.trim() ? 'var(--color-espresso)' : 'var(--color-sand)',
+                  background: input.trim() && !streaming ? 'var(--color-espresso)' : 'var(--color-sand)',
                   border: 'none',
                   padding: '10px 14px',
-                  cursor: input.trim() ? 'pointer' : 'default',
+                  cursor: input.trim() && !streaming ? 'pointer' : 'default',
                   transition: 'background 0.2s',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexShrink: 0,

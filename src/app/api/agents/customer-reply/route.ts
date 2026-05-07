@@ -1,121 +1,136 @@
-import Anthropic from '@anthropic-ai/sdk'
+// =========================================================================
+// /api/agents/customer-reply
+//
+// Streams the agent's response back as Server-Sent Events. Also:
+//   • mints/reuses a chat session via cookie
+//   • persists the full transcript in chat_messages
+//   • sends an admin alert email ONLY when the agent escalates
+//
+// The heavy lifting lives in src/lib/agent/*. This file is a thin glue.
+// =========================================================================
+
 import { Resend } from 'resend'
 import { createClient } from '../../../../lib/supabase/server'
+import { runAgent, eventToSSE, type AgentEvent } from '../../../../lib/agent/runtime'
+import { getOrCreateSession, readSessionCookie, sessionCookieHeader } from '../../../../lib/agent/sessions'
 
-const claude = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-const SYSTEM_PROMPT = `You are the customer service voice of Unweave.
-
-Unweave is a zero-waste fashion label. We only produce garments after 10 pre-orders are placed. No stock, no surplus.
-
-Tone: warm, knowledgeable, unhurried. Never pushy. Never use exclamation marks.
-Keep replies concise — 2-4 sentences max.
-If you have order context — reference it specifically in your reply.
-If asked about production — explain the pre-order model simply.`
+const MAX_MESSAGE_LENGTH = 2000
 
 export async function POST(req: Request) {
+  let body: { message?: string; customerEmail?: string | null }
   try {
-    const { message, customerEmail, subject } = await req.json()
-    const supabase = await createClient()
-
-    // 1. Save incoming message
-    const { data: saved } = await supabase
-      .from('customer_messages')
-      .insert({
-        customer_email: customerEmail || 'anonymous@unweave.com',
-        subject: subject || 'Chat message',
-        body: message,
-        status: 'new',
-      })
-      .select()
-      .single()
-
-    // 2. Fetch order history + product context
-    let orderContext = ''
-    if (customerEmail) {
-      const { data: orders } = await supabase
-        .from('orders')
-        .select(`
-          id, status, total, created_at,
-          order_items (
-            quantity, price,
-            products (name, material, status, preorder_count, preorder_target)
-          )
-        `)
-        .eq('customer_email', customerEmail)
-        .order('created_at', { ascending: false })
-        .limit(3)
-
-      if (orders && orders.length > 0) {
-        orderContext = '\n\nCustomer order history:\n'
-        orders.forEach(order => {
-          orderContext += `- Order #${order.id.slice(0, 8)}, status: ${order.status}, total: $${order.total}\n`
-          order.order_items?.forEach((item: any) => {
-            const p = item.products
-            if (p) {
-              orderContext += `  Product: ${p.name} (${p.material}), `
-              orderContext += `production status: ${p.status}`
-              if (p.preorder_count && p.preorder_target) {
-                orderContext += `, ${p.preorder_count}/${p.preorder_target} pre-orders`
-              }
-              orderContext += '\n'
-            }
-          })
-        })
-      }
-    }
-
-    // 3. Call Claude with full context
-    const response = await claude.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 300,
-      system: SYSTEM_PROMPT + orderContext,
-      messages: [{ role: 'user', content: message }],
-    })
-
-    const reply = response.content[0].type === 'text'
-      ? response.content[0].text
-      : 'Thank you for your message. We will get back to you shortly.'
-
-    // 4. Save draft + set follow-up trigger (24h)
-    const followUpAt = new Date(Date.now() + 30 * 1000)
-    if (saved?.id) {
-      await supabase
-        .from('customer_messages')
-        .update({
-          draft_reply: reply,
-          status: 'draft',
-          follow_up_at: followUpAt.toISOString(),
-        })
-        .eq('id', saved.id)
-    }
-
-    // 5. Email alert to admin
-    await resend.emails.send({
-      from: 'Unweave Agent <onboarding@resend.dev>',
-      to: process.env.ADMIN_EMAIL!,
-      subject: `New message from ${customerEmail || 'anonymous'} — draft ready`,
-      html: `
-        <h2>New customer message</h2>
-        <p><strong>From:</strong> ${customerEmail || 'anonymous'}</p>
-        <p><strong>Message:</strong> ${message}</p>
-        <hr/>
-        <h3>Agent draft reply:</h3>
-        <p>${reply}</p>
-        <hr/>
-        <p><strong>Follow-up trigger set for:</strong> ${followUpAt.toLocaleString()}</p>
-        <p><a href="${process.env.NEXT_PUBLIC_SITE_URL}/admin/messages">View in Admin →</a></p>
-      `,
-    })
-
-    return Response.json({ reply })
-
-  } catch (error) {
-    console.error('Agent error:', error)
-    return Response.json(
-      { reply: 'Thank you for your message. We will get back to you shortly.' },
-      { status: 500 }
-    )
+    body = await req.json()
+  } catch {
+    return Response.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
+
+  const message = (body.message ?? '').trim()
+  if (!message) return Response.json({ error: 'Empty message' }, { status: 400 })
+  if (message.length > MAX_MESSAGE_LENGTH) {
+    return Response.json({ error: `Message too long (max ${MAX_MESSAGE_LENGTH} chars)` }, { status: 400 })
+  }
+
+  const customerEmail = body.customerEmail?.trim() || null
+  const supabase = await createClient()
+  const cookieSessionId = readSessionCookie(req)
+  const { sessionId, isNew } = await getOrCreateSession(supabase, cookieSessionId, customerEmail)
+
+  // Stream the agent's events as SSE.
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const encoder = new TextEncoder()
+      const send = (event: AgentEvent) => controller.enqueue(encoder.encode(eventToSSE(event)))
+
+      let escalated = false
+
+      try {
+        for await (const event of runAgent({ supabase, sessionId, isNewSession: isNew, customerEmail, userMessage: message })) {
+          if (event.type === 'done' && event.escalated) escalated = true
+          send(event)
+        }
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : 'Unknown error'
+        console.error('[customer-reply] agent error:', err)
+        send({ type: 'error', message: errMsg })
+      } finally {
+        controller.close()
+      }
+
+      // Fire admin email AFTER the stream closes — don't block the customer
+      // waiting for SMTP. Best-effort: log but don't crash on failure.
+      if (escalated) sendAdminEscalationAlert(supabase, sessionId, customerEmail).catch(e =>
+        console.error('[customer-reply] admin alert failed:', e),
+      )
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+      ...(isNew ? { 'Set-Cookie': sessionCookieHeader(sessionId) } : {}),
+    },
+  })
+}
+
+// --- escalation email --------------------------------------------------
+
+function escapeHtml(s: string) {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+async function sendAdminEscalationAlert(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  sessionId: string,
+  customerEmail: string | null,
+) {
+  // Pull the last few transcript entries for context.
+  const { data: rows } = await supabase
+    .from('chat_messages')
+    .select('role, content, created_at')
+    .eq('session_id', sessionId)
+    .order('created_at', { ascending: false })
+    .limit(10)
+
+  const transcript = (rows ?? [])
+    .reverse()
+    .map(r => {
+      const blocks = Array.isArray(r.content) ? r.content : []
+      const text = blocks
+        .map((b: { type: string; text?: string; name?: string }) => {
+          if (b.type === 'text') return b.text ?? ''
+          if (b.type === 'tool_use') return `[tool: ${b.name}]`
+          if (b.type === 'tool_result') return '[tool result]'
+          return ''
+        })
+        .filter(Boolean)
+        .join(' ')
+      return `<p><strong>${r.role}:</strong> ${escapeHtml(text)}</p>`
+    })
+    .join('')
+
+  await resend.emails.send({
+    from: 'Unweave Agent <onboarding@resend.dev>',
+    to: process.env.ADMIN_EMAIL!,
+    subject: `Escalation needed — ${customerEmail ?? 'anonymous'}`,
+    html: `
+      <h2>Customer escalation</h2>
+      <p><strong>From:</strong> ${escapeHtml(customerEmail ?? 'anonymous')}</p>
+      <p><strong>Session:</strong> ${sessionId}</p>
+      <hr/>
+      <h3>Recent transcript</h3>
+      ${transcript || '<p><em>(empty)</em></p>'}
+      <hr/>
+      <p><a href="${process.env.NEXT_PUBLIC_SITE_URL}/admin/messages">Reply in Admin →</a></p>
+    `,
+  })
 }

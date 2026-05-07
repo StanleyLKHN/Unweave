@@ -100,6 +100,93 @@ const webSearch: LocalTool = {
 }
 
 // --------------------------------------------------------------------------
+// generate_product_image — Replicate (Flux Schnell)
+//
+// Calls Replicate's sync endpoint with `Prefer: wait`. Flux Schnell finishes
+// in ~3-5s so the request returns the final URL inline. The image is hosted
+// on replicate.delivery indefinitely, so we just pass the URL through to
+// save_report — no Supabase Storage round-trip.
+//
+// Workshop note: same external-API pattern as web_search (REST + bearer
+// token + JSON in/out). Different vendor, different deliverable, identical
+// integration shape. That's the lesson — tools compose vendors, no lock-in.
+// --------------------------------------------------------------------------
+const generateProductImage: LocalTool = {
+  definition: {
+    name: 'generate_product_image',
+    description:
+      'Generate ONE editorial product image via Flux Schnell. Use after web_search and before save_report — once per product. Craft a prompt that bridges the garment\'s actual attributes (material, silhouette, colour) with the dominant trend you identified. Treat this like directing a magazine shoot: setting, light, mood, composition.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        product_slug: { type: 'string', description: 'Which product this image is for. Used for status display only — does not affect generation.' },
+        prompt: { type: 'string', description: 'Full image prompt. ~30–60 words. Lead with the garment, then setting, then light/mood. Avoid trademarked names. Avoid the word "logo".' },
+        aspect_ratio: { type: 'string', enum: ['1:1', '4:5', '3:4', '16:9'], description: 'Default 4:5 (Instagram portrait).' },
+      },
+      required: ['product_slug', 'prompt'],
+    },
+  },
+  async handler(input) {
+    const apiToken = process.env.REPLICATE_API_TOKEN
+    if (!apiToken) {
+      return { result: 'REPLICATE_API_TOKEN is not set on the server. Tell the operator to configure it, then carry on without an image (pass image_url:null in product_content).', summary: 'replicate not configured' }
+    }
+
+    const { prompt, aspect_ratio } = input as { prompt: string; aspect_ratio?: string }
+
+    let res: Response
+    try {
+      res = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiToken}`,
+          'Prefer': 'wait',
+        },
+        body: JSON.stringify({
+          input: {
+            prompt,
+            aspect_ratio: aspect_ratio ?? '4:5',
+            output_format: 'webp',
+            output_quality: 85,
+            num_outputs: 1,
+            num_inference_steps: 4,
+            disable_safety_checker: false,
+          },
+        }),
+      })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'fetch failed'
+      return { result: `Replicate request failed: ${msg}`, summary: 'replicate request failed' }
+    }
+
+    if (!res.ok) {
+      const text = await res.text()
+      return { result: `Replicate error (${res.status}): ${text.slice(0, 300)}`, summary: 'replicate error' }
+    }
+
+    const payload = await res.json() as { status?: string; output?: string[] | string; error?: string }
+
+    if (payload.status && payload.status !== 'succeeded') {
+      return { result: `Generation did not finish in time (status: ${payload.status}). Try again or skip this product.`, summary: 'generation timeout' }
+    }
+    if (payload.error) {
+      return { result: `Replicate error: ${payload.error}`, summary: 'replicate error' }
+    }
+
+    const url = Array.isArray(payload.output) ? payload.output[0] : payload.output
+    if (!url) {
+      return { result: 'No image URL in Replicate response.', summary: 'no output' }
+    }
+
+    return {
+      result: `Image generated. URL: ${url}\nPass this URL as image_url in the corresponding product_content entry of save_report.`,
+      summary: 'image generated',
+    }
+  },
+}
+
+// --------------------------------------------------------------------------
 // list_products
 //
 // Reads from the static catalog file rather than Supabase. The brand's
@@ -146,6 +233,8 @@ type ProductContentInput = {
   social_caption?: string
   email_blurb?: string
   expanded_description?: string
+  image_url?: string
+  image_prompt?: string
 }
 
 type SaveReportInput = {
@@ -195,6 +284,8 @@ const saveReport: LocalTool = {
               social_caption: { type: 'string', description: '1–2 lines for Instagram. No hashtags.' },
               email_blurb: { type: 'string', description: '2–3 sentences for the weekly newsletter.' },
               expanded_description: { type: 'string', description: '~80 words for the product page, bridging into the trend.' },
+              image_url: { type: 'string', description: 'URL returned by generate_product_image for this product. Omit if image generation failed.' },
+              image_prompt: { type: 'string', description: 'The prompt you used in generate_product_image, so it is recorded with the report.' },
             },
             required: ['product_slug', 'social_caption', 'email_blurb', 'expanded_description'],
           },
@@ -241,6 +332,8 @@ const saveReport: LocalTool = {
       social_caption: p.social_caption ?? '',
       email_blurb: p.email_blurb ?? '',
       expanded_description: p.expanded_description ?? '',
+      image_url: p.image_url ?? null,
+      image_prompt: p.image_prompt ?? null,
     }))
 
     if (rows.length) {
@@ -265,7 +358,7 @@ const saveReport: LocalTool = {
 // Exports
 // --------------------------------------------------------------------------
 
-const TOOLS: LocalTool[] = [webSearch, listProducts, saveReport]
+const TOOLS: LocalTool[] = [webSearch, listProducts, generateProductImage, saveReport]
 
 export const TOOL_DEFINITIONS: Anthropic.Tool[] = TOOLS.map(t => t.definition)
 

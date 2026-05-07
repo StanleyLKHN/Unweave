@@ -29,11 +29,14 @@ A single structured report with five parts:
 3. **brand_implications** — one paragraph. How these trends interact with
    Unweave's specific position: deadstock materials, no-stock model,
    pre-order economics, target customer who buys 2–3 pieces per year.
-4. **product_content** — for EVERY active product, generate three things:
+4. **product_content** — for EVERY active product, generate FIVE things:
      - social_caption: 1–2 lines, fits Instagram. No hashtags.
      - email_blurb: 2–3 sentences for the weekly newsletter.
      - expanded_description: ~80 words for the product page, leaning into
        the most relevant trend you identified.
+     - image_url: from generate_product_image (one image per product, see below).
+     - image_prompt: the same prompt you passed to generate_product_image,
+       so it is recorded with the report.
 5. **next_week_focus** — one paragraph. Which product should lead, what
    angle to push, which trend to ride. Concrete, actionable.
 
@@ -52,7 +55,20 @@ A single structured report with five parts:
   calls past the budget.
 - Synthesise — do not just list links. The report should read like a
   smart colleague had a coffee and an opinion, not a Google scrape.
+- Then call generate_product_image ONCE per active product. Treat it like
+  art-directing a magazine shoot: pick a setting that bridges the garment
+  with the dominant trend you identified. Examples that work:
+    * "Oatmeal wool trench coat hanging on a bare plaster wall, soft northern
+       morning light, undyed natural materials, editorial fashion photography,
+       muted palette, vertical 4:5 composition, fine grain"
+    * "Deadstock silk column dress on minimalist wooden hanger, single source
+       of warm afternoon light, shallow depth of field, hand-finished seams
+       visible, quiet luxury aesthetic"
+  Avoid trademarked names, logos, model faces. Lead with the garment, then
+  setting, then light/mood. Stay around 30–60 words per prompt.
 - When everything is ready, call save_report ONCE with the full payload.
+  Pass each image URL into the matching product_content.image_url, and the
+  prompt you used into product_content.image_prompt.
   Do NOT call save_report incrementally — the schema expects everything at once.
 
 # Voice rules
@@ -75,7 +91,7 @@ A single structured report with five parts:
 
 # Workflow
 
-list_products → web_search × 3–6 → save_report → done.
+list_products → web_search × 3–6 → generate_product_image × N (one per product) → save_report → done.
 
 After save_report returns, write a single one-line confirmation to the user
 (e.g. "Report ready — covers 4 products and 5 trends.") and stop.`

@@ -34,6 +34,8 @@ export type ProductContent = {
   social_caption: string
   email_blurb: string
   expanded_description: string
+  image_url: string | null
+  image_prompt: string | null
 }
 
 type StatusEntry = { id: number; label: string; kind: 'status' | 'search' | 'tool' | 'result' | 'error' }
@@ -250,13 +252,30 @@ function ReportView({ report, productContent }: { report: Report; productContent
       <Section label={`Product content · ${productContent.length}`}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           {productContent.map(pc => (
-            <div key={pc.id} style={{ background: '#FDFAF5', border: '0.5px solid #D4C9B0', padding: '1.5rem 1.75rem' }}>
-              <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 400, color: '#2C1F14', marginBottom: '14px' }}>
-                {pc.product_name}
-              </h3>
-              <CopyBlock label="Social caption"        value={pc.social_caption} />
-              <CopyBlock label="Email blurb"           value={pc.email_blurb} />
-              <CopyBlock label="Expanded description"  value={pc.expanded_description} last />
+            <div key={pc.id} style={{ background: '#FDFAF5', border: '0.5px solid #D4C9B0', padding: '1.5rem 1.75rem', display: 'grid', gridTemplateColumns: pc.image_url ? '220px 1fr' : '1fr', gap: '1.5rem', alignItems: 'start' }}>
+              {pc.image_url && (
+                <div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={pc.image_url}
+                    alt={pc.product_name}
+                    style={{ width: '100%', aspectRatio: '4 / 5', objectFit: 'cover', display: 'block', border: '0.5px solid #D4C9B0' }}
+                  />
+                  {pc.image_prompt && (
+                    <p style={{ fontFamily: 'Jost, sans-serif', fontSize: '10px', color: '#8C7B6E', marginTop: '8px', lineHeight: 1.5, fontStyle: 'italic' }}>
+                      {pc.image_prompt}
+                    </p>
+                  )}
+                </div>
+              )}
+              <div>
+                <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 400, color: '#2C1F14', marginBottom: '14px' }}>
+                  {pc.product_name}
+                </h3>
+                <CopyBlock label="Social caption"        value={pc.social_caption} />
+                <CopyBlock label="Email blurb"           value={pc.email_blurb} />
+                <CopyBlock label="Expanded description"  value={pc.expanded_description} last />
+              </div>
             </div>
           ))}
         </div>

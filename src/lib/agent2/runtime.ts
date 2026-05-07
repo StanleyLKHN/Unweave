@@ -26,9 +26,10 @@ export type Agent2Event =
   | { type: 'error'; message: string }
 
 const STATUS_LABEL: Record<string, string> = {
-  list_products: 'Pulling the active catalog…',
-  save_report:   'Saving the finished report…',
-  web_search:    'Searching the web…',
+  list_products:           'Pulling the active catalog…',
+  save_report:             'Saving the finished report…',
+  web_search:              'Searching the web…',
+  generate_product_image:  'Generating image…',
 }
 
 export async function* runAgent2(args: {
@@ -56,36 +57,54 @@ export async function* runAgent2(args: {
   ]
 
   for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
-    const stream = anthropic.messages.stream({
-      model: MODEL,
-      max_tokens: MAX_TOKENS,
-      system: SYSTEM_PROMPT,
-      tools: TOOL_DEFINITIONS,
-      messages,
-    })
+    let final: Anthropic.Message
+    try {
+      const stream = anthropic.messages.stream({
+        model: MODEL,
+        max_tokens: MAX_TOKENS,
+        system: SYSTEM_PROMPT,
+        tools: TOOL_DEFINITIONS,
+        messages,
+      })
 
-    // Surface tool inputs for nice UI: when a tool_use block opens we know
-    // its name; when its input arrives as JSON deltas we parse the search
-    // query so the dashboard can show "Searching: 'linen ss26'" live.
-    let inputJson = ''
-    let activeTool = ''
+      // Surface tool inputs for nice UI: when a tool_use block opens we know
+      // its name; when its input arrives as JSON deltas we parse the search
+      // query so the dashboard can show "Searching: 'linen ss26'" live.
+      let inputJson = ''
+      let activeTool = ''
 
-    for await (const event of stream) {
-      if (event.type === 'content_block_start' && event.content_block.type === 'tool_use') {
-        activeTool = event.content_block.name
-        inputJson = ''
-        yield { type: 'tool_use', name: activeTool, label: STATUS_LABEL[activeTool] ?? `Running ${activeTool}…` }
-      } else if (event.type === 'content_block_delta' && event.delta.type === 'input_json_delta' && activeTool === 'web_search') {
-        inputJson += event.delta.partial_json
-        const m = inputJson.match(/"query"\s*:\s*"([^"]*)"/)
-        if (m) {
-          yield { type: 'search', query: m[1] }
-          activeTool = ''   // emit the search event only once per call
+      for await (const event of stream) {
+        if (event.type === 'content_block_start' && event.content_block.type === 'tool_use') {
+          activeTool = event.content_block.name
+          inputJson = ''
+          yield { type: 'tool_use', name: activeTool, label: STATUS_LABEL[activeTool] ?? `Running ${activeTool}…` }
+        } else if (event.type === 'content_block_delta' && event.delta.type === 'input_json_delta' && activeTool === 'web_search') {
+          inputJson += event.delta.partial_json
+          const m = inputJson.match(/"query"\s*:\s*"([^"]*)"/)
+          if (m) {
+            yield { type: 'search', query: m[1] }
+            activeTool = ''   // emit the search event only once per call
+          }
         }
       }
+
+      final = await stream.finalMessage()
+    } catch (err) {
+      // If save_report already succeeded, a later API failure (rate limit,
+      // depleted credits, network blip) shouldn't be presented as a failed
+      // run — the deliverable is already in the database.
+      if (ctx.reportRef.id) {
+        yield {
+          type: 'done',
+          reportId: ctx.reportRef.id,
+          productCount: ctx.reportRef.productCount,
+          trendCount: ctx.reportRef.trendCount,
+        }
+        return
+      }
+      throw err
     }
 
-    const final = await stream.finalMessage()
     messages.push({ role: 'assistant', content: final.content })
 
     if (final.stop_reason !== 'tool_use') {

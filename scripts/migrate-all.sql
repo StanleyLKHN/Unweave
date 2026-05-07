@@ -69,3 +69,9 @@ CREATE TABLE IF NOT EXISTS product_content (
 
 CREATE INDEX IF NOT EXISTS idx_product_content_report ON product_content(report_id);
 CREATE INDEX IF NOT EXISTS idx_product_content_slug   ON product_content(product_slug);
+
+-- Agent 2: image generation extension --
+
+ALTER TABLE product_content
+  ADD COLUMN IF NOT EXISTS image_url    TEXT,
+  ADD COLUMN IF NOT EXISTS image_prompt TEXT;

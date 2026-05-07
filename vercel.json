@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/agents/agent2/cron",
-      "schedule": "0 8 * * MON"
+      "schedule": "0 8 * * 1"
     }
   ]
 }
